@@ -1,10 +1,8 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
-import { motion } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable/index";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { Sparkles, Loader2, Eye, EyeOff, Mail, Lock, User } from "lucide-react";
@@ -13,6 +11,9 @@ export const Route = createFileRoute("/login")({
   head: () => ({ meta: [{ title: "Sign in — ShortForge AI Ultra" }] }),
   component: LoginPage,
 });
+
+const fieldCls =
+  "w-full h-11 rounded-xl bg-background/60 border border-border pl-10 pr-3 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:border-[var(--neon)] focus:ring-2 focus:ring-[var(--neon)]/30 transition";
 
 function LoginPage() {
   const nav = useNavigate();
@@ -43,7 +44,7 @@ function LoginPage() {
           toast.success("Check your email to verify your account.");
           return;
         }
-        toast.success("Account created. You're in.");
+        toast.success("Account created.");
         nav({ to: "/generate" });
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
@@ -102,20 +103,16 @@ function LoginPage() {
 
   if (pendingVerify) {
     return (
-      <div className="min-h-[100dvh] w-full overflow-y-auto grid-bg flex justify-center items-start sm:items-center px-4 py-6 sm:py-12">
-        <motion.div
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="w-full max-w-md glass-strong rounded-3xl p-5 sm:p-8 text-center my-auto"
-        >
-          <div className="size-14 mx-auto rounded-2xl bg-gradient-to-br from-[var(--neon)] to-[var(--plasma)] flex items-center justify-center mb-4">
-            <Mail className="size-6 text-background" strokeWidth={2.5} />
+      <div className="min-h-[100dvh] w-full overflow-y-auto bg-background flex justify-center items-start sm:items-center px-4 py-6">
+        <div className="w-full max-w-sm rounded-2xl bg-card border border-border p-6 text-center my-auto shadow-xl">
+          <div className="size-12 mx-auto rounded-xl bg-gradient-to-br from-[var(--neon)] to-[var(--plasma)] flex items-center justify-center mb-3">
+            <Mail className="size-5 text-background" strokeWidth={2.5} />
           </div>
-          <h1 className="font-display text-2xl font-bold mb-2">Verify your email</h1>
-          <p className="text-sm text-muted-foreground mb-6 break-words">
-            We sent a confirmation link to <span className="text-foreground font-medium">{pendingVerify}</span>. Click it to activate your account.
+          <h1 className="font-display text-xl font-bold mb-2">Verify your email</h1>
+          <p className="text-sm text-muted-foreground mb-5 break-words">
+            We sent a link to <span className="text-foreground font-medium">{pendingVerify}</span>.
           </p>
-          <Button onClick={resendVerify} disabled={busy} variant="outline" className="w-full h-11 mb-2">
+          <Button onClick={resendVerify} disabled={busy} variant="outline" className="w-full h-11">
             {busy ? <Loader2 className="size-4 animate-spin" /> : "Resend verification email"}
           </Button>
           <button
@@ -124,32 +121,27 @@ function LoginPage() {
           >
             ← Back to sign in
           </button>
-        </motion.div>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-[100dvh] w-full overflow-y-auto grid-bg flex justify-center items-start sm:items-center px-4 py-6 sm:py-12">
-      <motion.div
-        initial={{ opacity: 0, y: 12 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4 }}
-        className="w-full max-w-md glass-strong rounded-3xl p-5 sm:p-8 my-auto"
-      >
-        <Link to="/" className="flex items-center gap-2 mb-6 sm:mb-8 w-fit">
-          <div className="size-9 rounded-lg bg-gradient-to-br from-[var(--neon)] to-[var(--plasma)] flex items-center justify-center">
+    <div className="min-h-[100dvh] w-full overflow-y-auto bg-background flex justify-center items-start sm:items-center px-4 py-6">
+      <div className="w-full max-w-sm rounded-2xl bg-card border border-border p-5 sm:p-6 my-auto shadow-xl">
+        <Link to="/" className="flex items-center gap-2 mb-4 w-fit">
+          <div className="size-8 rounded-lg bg-gradient-to-br from-[var(--neon)] to-[var(--plasma)] flex items-center justify-center">
             <Sparkles className="size-4 text-background" strokeWidth={2.5} />
           </div>
-          <span className="font-display font-bold">
+          <span className="font-display font-bold text-sm">
             ShortForge<span className="text-gradient"> AI</span>
           </span>
         </Link>
 
-        <h1 className="font-display text-2xl sm:text-3xl font-bold mb-1">
+        <h1 className="font-display text-xl sm:text-2xl font-bold mb-1">
           {mode === "signin" ? "Welcome back" : "Create your account"}
         </h1>
-        <p className="text-sm text-muted-foreground mb-6">
+        <p className="text-xs sm:text-sm text-muted-foreground mb-4">
           {mode === "signin" ? "Sign in to forge viral scripts." : "Free plan, no card required."}
         </p>
 
@@ -158,7 +150,7 @@ function LoginPage() {
           onClick={google}
           disabled={busy}
           variant="outline"
-          className="w-full mb-4 h-11 touch-manipulation"
+          className="w-full mb-3 h-11 bg-background/60"
         >
           <svg className="size-4 mr-2" viewBox="0 0 24 24">
             <path
@@ -169,7 +161,7 @@ function LoginPage() {
           Continue with Google
         </Button>
 
-        <div className="flex items-center gap-3 my-4 text-xs text-muted-foreground">
+        <div className="flex items-center gap-3 my-3 text-xs text-muted-foreground">
           <div className="h-px bg-border flex-1" />
           or
           <div className="h-px bg-border flex-1" />
@@ -177,40 +169,41 @@ function LoginPage() {
 
         <form onSubmit={submit} className="space-y-3">
           {mode === "signup" && (
-            <div className="space-y-1.5">
-              <Label htmlFor="name">Name</Label>
+            <div className="space-y-1">
+              <Label htmlFor="name" className="text-xs">Name</Label>
               <div className="relative">
-                <User className="size-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-                <Input
+                <User className="size-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+                <input
                   id="name"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   required
-                  className="pl-9 h-11"
                   autoComplete="name"
+                  className={fieldCls}
                 />
               </div>
             </div>
           )}
-          <div className="space-y-1.5">
-            <Label htmlFor="email">Email</Label>
+          <div className="space-y-1">
+            <Label htmlFor="email" className="text-xs">Email</Label>
             <div className="relative">
-              <Mail className="size-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-              <Input
+              <Mail className="size-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+              <input
                 id="email"
                 type="email"
                 inputMode="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                className="pl-9 h-11"
                 autoComplete="email"
+                placeholder="you@example.com"
+                className={fieldCls}
               />
             </div>
           </div>
-          <div className="space-y-1.5">
+          <div className="space-y-1">
             <div className="flex items-center justify-between">
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="password" className="text-xs">Password</Label>
               {mode === "signin" && (
                 <Link
                   to="/forgot-password"
@@ -221,16 +214,17 @@ function LoginPage() {
               )}
             </div>
             <div className="relative">
-              <Lock className="size-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-              <Input
+              <Lock className="size-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+              <input
                 id="password"
                 type={showPw ? "text" : "password"}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 minLength={6}
-                className="pl-9 pr-10 h-11"
                 autoComplete={mode === "signin" ? "current-password" : "new-password"}
+                placeholder="••••••••"
+                className={`${fieldCls} pr-10`}
               />
               <button
                 type="button"
@@ -246,7 +240,7 @@ function LoginPage() {
           <Button
             type="submit"
             disabled={busy}
-            className="w-full btn-hero h-11 rounded-xl touch-manipulation"
+            className="w-full btn-hero h-11 rounded-xl mt-1"
           >
             {busy ? (
               <Loader2 className="size-4 animate-spin" />
@@ -260,13 +254,13 @@ function LoginPage() {
 
         <button
           onClick={() => setMode(mode === "signin" ? "signup" : "signin")}
-          className="mt-5 text-sm text-muted-foreground hover:text-foreground w-full text-center"
+          className="mt-4 text-sm text-muted-foreground hover:text-foreground w-full text-center"
         >
           {mode === "signin"
             ? "No account? Create one →"
             : "Already have an account? Sign in →"}
         </button>
-      </motion.div>
+      </div>
     </div>
   );
 }
