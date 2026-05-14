@@ -1,12 +1,15 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
+import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
 const inputSchema = z.object({
   topic: z.string().trim().min(3).max(500),
   category: z.string().min(2).max(40),
   language: z.enum(["english", "hindi", "hinglish"]),
   format: z.enum(["short", "long"]),
-  tier: z.enum(["free", "pro", "max"]).default("free"),
+  // Custom target word count (optional — if omitted, uses format defaults)
+  target_words: z.number().int().min(40).max(2000).optional(),
 });
 
 export type GenerateInput = z.infer<typeof inputSchema>;
@@ -35,15 +38,19 @@ export type GenerateResult = {
     titles: string[];
     short_description: string;
     long_description: string;
-    hashtags: string[]; // 86
-    seo_tags: string; // 500 chars
+    hashtags: string[];
+    seo_tags: string;
     thumbnail_text: string;
     video_category: string;
   };
-  scores: {
-    virality: number;
-    retention: number;
-    ctr: number;
+  scores: { virality: number; retention: number; ctr: number };
+  usage: {
+    plan: "free" | "pro" | "max";
+    shorts_used: number;
+    longs_used: number;
+    shorts_limit: number;
+    longs_limit: number;
+    reset_at: string;
   };
 };
 
@@ -58,10 +65,24 @@ WRITING RULES:
 - Use loop-ending: last line should re-trigger curiosity or imply more.
 - Adapt tone to category (horror = dread, motivation = fire, science = awe, etc.).
 - For "What If" topics, the FIRST line MUST naturally start with "What if".
-- For Hinglish, mix natural Hindi + English the way real Indian creators speak.
-- For Hindi, use Devanagari script.
-- SHORT format: total script body must be EXACTLY between 86 and 100 words. Count carefully.
-- LONG format: 700–1100 words, broken into clear cinematic beats.
+
+LANGUAGE RULES:
+- english: pure English, natural creator voice.
+- hindi: pure Hindi in DEVANAGARI script (देवनागरी). No Roman letters.
+- hinglish: this is the way real Indian YouTubers like BB Ki Vines, MrBeast Hindi dubs, and viral Shorts creators speak.
+  * Write ENTIRELY in the English alphabet (Roman script). Never use Devanagari.
+  * Roughly 95–98% of the words must be HINDI words spelled phonetically in Roman script
+    (e.g. "kya", "matlab", "socho", "zindagi", "rasta", "andhera", "dimag", "kabhi", "lekin", "phir", "samajh", "agar", "yaar", "bhai", "dekho", "suno", "hota hai", "ho gaya", "kar diya").
+  * Only allow common loan-words that Indians genuinely use in conversation
+    (phone, video, internet, AI, gym, plan, level, system, etc.). Avoid heavy English vocabulary.
+  * NEVER write full English sentences or fancy English literary words.
+  * Tone: emotional, conversational, street-real, cinematic. Like a desi narrator whispering a secret.
+  * Punctuation and pacing should feel like spoken Hindi, not translated English.
+
+WORD COUNT RULES (STRICT):
+- The user-provided "target_words" is the EXACT word count to hit (±5% tolerance).
+- Count words carefully before returning. word_count in the JSON must reflect the actual count.
+- If no target is given, SHORT = 86–100 words, LONG = 700–1100 words.
 
 For EVERY line of the script, generate a scene with cinematic image_prompt and video_prompt
 optimized for Midjourney / Flux / Sora / Veo / Runway / Kling — ultra-detailed, dramatic, high-contrast.
@@ -89,7 +110,7 @@ const tools = [
         properties: {
           detected_category: { type: "string" },
           word_count: { type: "integer" },
-          script: { type: "string", description: "Full script as plain text, lines separated by \\n" },
+          script: { type: "string" },
           scenes: {
             type: "array",
             items: {
@@ -143,34 +164,63 @@ const tools = [
   },
 ];
 
+function parseQuotaError(message: string): string {
+  // QUOTA_EXCEEDED:short:2:2:2026-05-15 08:00:00+00
+  const m = message.match(/QUOTA_EXCEEDED:(short|long):(\d+):(\d+):(.+)/);
+  if (!m) return message;
+  const [, fmt, used, limit, reset] = m;
+  const resetDate = new Date(reset);
+  const hrs = Math.max(0, Math.ceil((resetDate.getTime() - Date.now()) / 3_600_000));
+  return `Daily ${fmt} script limit reached (${used}/${limit}). Resets in ~${hrs}h. Upgrade your plan for more.`;
+}
+
+export const getMyUsage = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { supabase } = context;
+    const { data, error } = await supabase.rpc("get_my_usage");
+    if (error) throw new Error(error.message);
+    return data as GenerateResult["usage"];
+  });
+
 export const generateScript = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => inputSchema.parse(d))
-  .handler(async ({ data }): Promise<GenerateResult> => {
+  .handler(async ({ data, context }): Promise<GenerateResult> => {
     const apiKey = process.env.LOVABLE_API_KEY;
     if (!apiKey) throw new Error("LOVABLE_API_KEY not configured");
 
+    const { supabase, userId } = context;
+
+    // 1. Atomically check + consume quota (uses real plan from DB, not client input)
+    const { data: usage, error: quotaErr } = await supabase.rpc("consume_quota", { _format: data.format });
+    if (quotaErr) throw new Error(parseQuotaError(quotaErr.message));
+    const usageData = usage as GenerateResult["usage"];
+
+    // 2. Resolve model from the user's actual plan
     const tierModel: Record<string, string> = {
-      free: "google/gemini-3-flash-preview",
+      free: "google/gemini-2.5-flash",
       pro: "google/gemini-2.5-flash",
       max: "google/gemini-2.5-pro",
     };
 
+    const targetWords = data.target_words ?? (data.format === "short" ? 95 : 900);
+    const minW = Math.max(40, Math.round(targetWords * 0.95));
+    const maxW = Math.round(targetWords * 1.05);
+
     const userPrompt = `TOPIC: ${data.topic}
 CATEGORY: ${data.category}${data.category === "auto" ? " (auto-detect the BEST viral category)" : ""}
 LANGUAGE: ${data.language}
-FORMAT: ${data.format === "short" ? "SHORT (86–100 words, viral YouTube Short)" : "LONG (700–1100 words, cinematic long-form)"}
-TIER: ${data.tier}
+FORMAT: ${data.format === "short" ? "SHORT (viral YouTube Short)" : "LONG (cinematic long-form)"}
+TARGET WORD COUNT: exactly ${targetWords} words (acceptable range: ${minW}–${maxW})
 
 Generate the script pack now. Be ruthless about quality. No filler. Hook hard. Loop the ending.`;
 
     const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
+      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
       body: JSON.stringify({
-        model: tierModel[data.tier],
+        model: tierModel[usageData.plan],
         messages: [
           { role: "system", content: SYSTEM },
           { role: "user", content: userPrompt },
@@ -181,6 +231,8 @@ Generate the script pack now. Be ruthless about quality. No filler. Hook hard. L
     });
 
     if (!res.ok) {
+      // Roll back the quota consumption on AI failure
+      await supabaseAdmin.rpc("admin_reset_usage" as never, { _target: userId } as never).catch(() => {});
       const t = await res.text();
       if (res.status === 429) throw new Error("Rate limit reached. Please try again in a moment.");
       if (res.status === 402) throw new Error("AI credits exhausted. Add credits to continue.");
@@ -190,6 +242,21 @@ Generate the script pack now. Be ruthless about quality. No filler. Hook hard. L
     const json = await res.json();
     const call = json.choices?.[0]?.message?.tool_calls?.[0];
     if (!call?.function?.arguments) throw new Error("AI returned no script payload");
-    const parsed = JSON.parse(call.function.arguments) as GenerateResult;
-    return parsed;
+    const parsed = JSON.parse(call.function.arguments) as Omit<GenerateResult, "usage">;
+
+    // 3. Persist the generation
+    await supabaseAdmin.from("generations").insert({
+      user_id: userId,
+      topic: data.topic,
+      category: parsed.detected_category ?? data.category,
+      language: data.language,
+      format: data.format,
+      tier: usageData.plan,
+      payload: parsed as never,
+      virality: parsed.scores.virality,
+      retention: parsed.scores.retention,
+      ctr: parsed.scores.ctr,
+    });
+
+    return { ...parsed, usage: usageData };
   });
