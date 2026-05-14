@@ -14,6 +14,8 @@ export const Route = createFileRoute("/admin/login")({
   component: AdminLoginPage,
 });
 
+const ADMIN_EMAIL = "rihan@gmail.com";
+
 const fieldCls =
   "w-full h-11 rounded-xl bg-background/60 border border-border pl-10 pr-3 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:border-[var(--neon)] focus:ring-2 focus:ring-[var(--neon)]/30 transition";
 
@@ -21,7 +23,7 @@ function AdminLoginPage() {
   const nav = useNavigate();
   const record = useServerFn(recordAdminLogin);
   const { refresh } = useAuth();
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState(ADMIN_EMAIL);
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [showPw, setShowPw] = useState(false);
