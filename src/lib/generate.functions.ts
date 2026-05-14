@@ -233,11 +233,10 @@ Generate the script pack now. Be ruthless about quality. No filler. Hook hard. L
     if (!res.ok) {
       // Best-effort refund of the consumed quota on AI failure
       try {
-        const col = data.format === "short" ? "shorts_used" : "longs_used";
-        await supabaseAdmin
-          .from("usage_counters")
-          .update({ [col]: Math.max(0, (data.format === "short" ? usageData.shorts_used : usageData.longs_used) - 1) })
-          .eq("user_id", userId);
+        const update = data.format === "short"
+          ? { shorts_used: Math.max(0, usageData.shorts_used - 1) }
+          : { longs_used: Math.max(0, usageData.longs_used - 1) };
+        await supabaseAdmin.from("usage_counters").update(update).eq("user_id", userId);
       } catch { /* ignore */ }
       const t = await res.text();
       if (res.status === 429) throw new Error("Rate limit reached. Please try again in a moment.");
