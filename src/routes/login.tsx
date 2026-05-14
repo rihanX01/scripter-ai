@@ -102,11 +102,11 @@ function LoginPage() {
 
   if (pendingVerify) {
     return (
-      <div className="min-h-[100dvh] flex items-center justify-center px-4 py-8 sm:py-12 grid-bg">
+      <div className="min-h-[100dvh] w-full overflow-y-auto grid-bg flex justify-center items-start sm:items-center px-4 py-6 sm:py-12">
         <motion.div
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
-          className="w-full max-w-md glass-strong rounded-3xl p-6 sm:p-8 text-center"
+          className="w-full max-w-md glass-strong rounded-3xl p-5 sm:p-8 text-center my-auto"
         >
           <div className="size-14 mx-auto rounded-2xl bg-gradient-to-br from-[var(--neon)] to-[var(--plasma)] flex items-center justify-center mb-4">
             <Mail className="size-6 text-background" strokeWidth={2.5} />
