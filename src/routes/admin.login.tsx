@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { recordAdminLogin } from "@/lib/admin-security.functions";
+import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
@@ -19,6 +20,7 @@ const fieldCls =
 function AdminLoginPage() {
   const nav = useNavigate();
   const record = useServerFn(recordAdminLogin);
+  const { refresh } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
@@ -74,6 +76,7 @@ function AdminLoginPage() {
       }
       try { await record({ data: { email: data.session.user.email ?? undefined, success: true } }); } catch {}
       sessionStorage.setItem("admin_login_at", String(Date.now()));
+      await refresh();
       toast.success("Welcome, Administrator.");
       await nav({ to: "/admin", replace: true });
     } catch (err: any) {
