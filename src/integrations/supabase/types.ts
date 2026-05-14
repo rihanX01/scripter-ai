@@ -41,6 +41,39 @@ export type Database = {
         }
         Relationships: []
       }
+      admin_login_events: {
+        Row: {
+          admin_id: string
+          created_at: string
+          email: string | null
+          id: string
+          ip: string | null
+          reason: string | null
+          success: boolean
+          user_agent: string | null
+        }
+        Insert: {
+          admin_id: string
+          created_at?: string
+          email?: string | null
+          id?: string
+          ip?: string | null
+          reason?: string | null
+          success?: boolean
+          user_agent?: string | null
+        }
+        Update: {
+          admin_id?: string
+          created_at?: string
+          email?: string | null
+          id?: string
+          ip?: string | null
+          reason?: string | null
+          success?: boolean
+          user_agent?: string | null
+        }
+        Relationships: []
+      }
       announcements: {
         Row: {
           active: boolean
