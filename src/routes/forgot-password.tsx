@@ -36,7 +36,7 @@ function ForgotPasswordPage() {
   };
 
   return (
-    <div className="min-h-[100dvh] flex items-center justify-center px-4 py-6 sm:py-12 grid-bg">
+    <div className="min-h-[100dvh] w-full overflow-y-auto grid-bg flex justify-center items-start sm:items-center px-4 py-6 sm:py-12">
       <motion.div
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
