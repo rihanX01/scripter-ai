@@ -41,13 +41,17 @@ function LoginPage() {
         if (error) throw error;
         if (data.user && !data.session) {
           setPendingVerify(email);
-          toast.success("Check your email to verify your account.");
+          toast.success("Account created. Check your email to verify.");
           return;
         }
-        toast.success("Account created.");
-        nav({ to: "/generate" });
+        // Account created — send user to sign-in page as requested.
+        toast.success("Account created. Please sign in.");
+        await supabase.auth.signOut();
+        setMode("signin");
+        setPassword("");
+        return;
       } else {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
+        const { data, error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) {
           if (error.message.toLowerCase().includes("email not confirmed")) {
             setPendingVerify(email);
@@ -56,8 +60,11 @@ function LoginPage() {
           }
           throw error;
         }
+        if (!data.session) throw new Error("No session returned");
         toast.success("Welcome back.");
-        nav({ to: "/generate" });
+        // Hard nav so the protected route's beforeLoad sees the persisted session.
+        window.location.assign("/generate");
+        return;
       }
     } catch (err: any) {
       toast.error(err.message ?? "Auth failed");
