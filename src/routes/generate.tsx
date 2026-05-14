@@ -248,6 +248,40 @@ function GeneratePage() {
   );
 }
 
+function UsageBadge({ usage }: { usage?: GenerateResult["usage"] }) {
+  const [now, setNow] = useState(Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, []);
+  if (!usage) return null;
+  const ms = Math.max(0, new Date(usage.reset_at).getTime() - now);
+  const h = Math.floor(ms / 3_600_000);
+  const m = Math.floor((ms % 3_600_000) / 60_000);
+  const s = Math.floor((ms % 60_000) / 1000);
+  const fmt = `${String(h).padStart(2,"0")}:${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}`;
+  const shortsLeft = Math.max(0, usage.shorts_limit - usage.shorts_used);
+  const longsLeft  = Math.max(0, usage.longs_limit  - usage.longs_used);
+  return (
+    <div className="mb-4 glass rounded-2xl p-3 border border-white/5">
+      <div className="flex items-center justify-between text-[10px] font-mono uppercase tracking-wider text-muted-foreground mb-2">
+        <span className="inline-flex items-center gap-1.5"><Zap className="size-3 text-[var(--neon)]" /> {usage.plan} plan</span>
+        <span className="inline-flex items-center gap-1.5"><Timer className="size-3" /> resets in {fmt}</span>
+      </div>
+      <div className="grid grid-cols-2 gap-2">
+        <div className="bg-white/[0.03] rounded-lg px-2.5 py-1.5">
+          <div className="text-[9px] text-muted-foreground uppercase tracking-wider">Shorts left</div>
+          <div className="font-display text-base font-bold">{shortsLeft}<span className="text-xs text-muted-foreground font-normal">/{usage.shorts_limit}</span></div>
+        </div>
+        <div className="bg-white/[0.03] rounded-lg px-2.5 py-1.5">
+          <div className="text-[9px] text-muted-foreground uppercase tracking-wider">Long-form left</div>
+          <div className="font-display text-base font-bold">{longsLeft}<span className="text-xs text-muted-foreground font-normal">/{usage.longs_limit}</span></div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="mb-4">
