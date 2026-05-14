@@ -1,18 +1,23 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Sparkles, Wand2, Copy, Check, Download, RotateCcw, ArrowLeft,
-  Image as ImageIcon, Video, Hash, Gauge, Film, Loader2, Flame,
+  Image as ImageIcon, Video, Hash, Gauge, Film, Loader2, Flame, Timer, Zap,
 } from "lucide-react";
-import { generateScript, type GenerateResult } from "@/lib/generate.functions";
+import { generateScript, getMyUsage, type GenerateResult } from "@/lib/generate.functions";
 import { Nav } from "@/components/site/Nav";
 import { Particles } from "@/components/site/Particles";
+import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/generate")({
   component: GeneratePage,
+  beforeLoad: async () => {
+    const { data } = await supabase.auth.getSession();
+    if (!data.session) throw redirect({ to: "/login" });
+  },
   head: () => ({
     meta: [
       { title: "Studio — ShortForge AI Ultra" },
@@ -27,12 +32,15 @@ const CATEGORIES = [
   "Space","History","Cinematic","Conspiracy","Viral",
 ];
 
+const SHORT_PRESETS = [60, 86, 100, 150];
+const LONG_PRESETS  = [500, 800, 1100, 1500];
+
 type Form = {
   topic: string;
   category: string;
   language: "english" | "hindi" | "hinglish";
   format: "short" | "long";
-  tier: "free" | "pro" | "max";
+  target_words: number;
 };
 
 function GeneratePage() {
@@ -41,15 +49,31 @@ function GeneratePage() {
     category: "auto",
     language: "english",
     format: "short",
-    tier: "free",
+    target_words: 95,
   });
   const [result, setResult] = useState<GenerateResult | null>(null);
 
   const fn = useServerFn(generateScript);
+  const usageFn = useServerFn(getMyUsage);
+  const qc = useQueryClient();
+
+  const usageQuery = useQuery({
+    queryKey: ["my-usage"],
+    queryFn: () => usageFn(),
+    refetchInterval: 60_000,
+  });
+
   const mutation = useMutation({
     mutationFn: (input: Form) => fn({ data: input }),
-    onSuccess: (data) => setResult(data),
+    onSuccess: (data) => {
+      setResult(data);
+      qc.setQueryData(["my-usage"], data.usage);
+    },
   });
+
+  const setFormat = (f: "short" | "long") => {
+    setForm((p) => ({ ...p, format: f, target_words: f === "short" ? 95 : 900 }));
+  };
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -103,18 +127,41 @@ function GeneratePage() {
                 />
               </Field>
 
+              <UsageBadge usage={usageQuery.data} />
+
               <Field label="Format">
                 <div className="grid grid-cols-2 gap-2">
                   {(["short","long"] as const).map((f) => (
                     <button key={f} type="button"
-                      onClick={() => setForm({ ...form, format: f })}
+                      onClick={() => setFormat(f)}
                       className={`rounded-xl py-2.5 text-sm font-medium transition-all ${
                         form.format === f ? "btn-hero" : "glass hover:bg-white/5"
                       }`}>
-                      {f === "short" ? "Short · 86–100w" : "Long · 700–1100w"}
+                      {f === "short" ? "Short" : "Long-form"}
                     </button>
                   ))}
                 </div>
+              </Field>
+
+              <Field label={`Target words · ${form.target_words}`}>
+                <div className="flex flex-wrap gap-2 mb-2">
+                  {(form.format === "short" ? SHORT_PRESETS : LONG_PRESETS).map((w) => (
+                    <button key={w} type="button"
+                      onClick={() => setForm({ ...form, target_words: w })}
+                      className={`rounded-lg px-3 py-1.5 text-xs font-mono transition-all ${
+                        form.target_words === w ? "bg-[var(--neon)] text-background" : "glass hover:bg-white/5"
+                      }`}>{w}w</button>
+                  ))}
+                </div>
+                <input
+                  type="range"
+                  min={form.format === "short" ? 40 : 300}
+                  max={form.format === "short" ? 250 : 2000}
+                  step={form.format === "short" ? 5 : 50}
+                  value={form.target_words}
+                  onChange={(e) => setForm({ ...form, target_words: Number(e.target.value) })}
+                  className="w-full accent-[var(--neon)]"
+                />
               </Field>
 
               <Field label="Language">
@@ -141,18 +188,6 @@ function GeneratePage() {
                     </option>
                   ))}
                 </select>
-              </Field>
-
-              <Field label="Quality tier">
-                <div className="grid grid-cols-3 gap-2">
-                  {(["free","pro","max"] as const).map((t) => (
-                    <button key={t} type="button"
-                      onClick={() => setForm({ ...form, tier: t })}
-                      className={`rounded-xl py-2 text-xs font-medium uppercase tracking-wider transition-all ${
-                        form.tier === t ? "btn-hero" : "glass hover:bg-white/5"
-                      }`}>{t}</button>
-                  ))}
-                </div>
               </Field>
 
               <button
@@ -209,6 +244,40 @@ function GeneratePage() {
           </div>
         </div>
       </main>
+    </div>
+  );
+}
+
+function UsageBadge({ usage }: { usage?: GenerateResult["usage"] }) {
+  const [now, setNow] = useState(Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, []);
+  if (!usage) return null;
+  const ms = Math.max(0, new Date(usage.reset_at).getTime() - now);
+  const h = Math.floor(ms / 3_600_000);
+  const m = Math.floor((ms % 3_600_000) / 60_000);
+  const s = Math.floor((ms % 60_000) / 1000);
+  const fmt = `${String(h).padStart(2,"0")}:${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}`;
+  const shortsLeft = Math.max(0, usage.shorts_limit - usage.shorts_used);
+  const longsLeft  = Math.max(0, usage.longs_limit  - usage.longs_used);
+  return (
+    <div className="mb-4 glass rounded-2xl p-3 border border-white/5">
+      <div className="flex items-center justify-between text-[10px] font-mono uppercase tracking-wider text-muted-foreground mb-2">
+        <span className="inline-flex items-center gap-1.5"><Zap className="size-3 text-[var(--neon)]" /> {usage.plan} plan</span>
+        <span className="inline-flex items-center gap-1.5"><Timer className="size-3" /> resets in {fmt}</span>
+      </div>
+      <div className="grid grid-cols-2 gap-2">
+        <div className="bg-white/[0.03] rounded-lg px-2.5 py-1.5">
+          <div className="text-[9px] text-muted-foreground uppercase tracking-wider">Shorts left</div>
+          <div className="font-display text-base font-bold">{shortsLeft}<span className="text-xs text-muted-foreground font-normal">/{usage.shorts_limit}</span></div>
+        </div>
+        <div className="bg-white/[0.03] rounded-lg px-2.5 py-1.5">
+          <div className="text-[9px] text-muted-foreground uppercase tracking-wider">Long-form left</div>
+          <div className="font-display text-base font-bold">{longsLeft}<span className="text-xs text-muted-foreground font-normal">/{usage.longs_limit}</span></div>
+        </div>
+      </div>
     </div>
   );
 }

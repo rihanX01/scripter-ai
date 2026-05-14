@@ -213,26 +213,26 @@ export type Database = {
         Row: {
           id: string
           longs_used: number
-          period_start: string
           shorts_used: number
           updated_at: string
           user_id: string
+          window_start: string
         }
         Insert: {
           id?: string
           longs_used?: number
-          period_start?: string
           shorts_used?: number
           updated_at?: string
           user_id: string
+          window_start?: string
         }
         Update: {
           id?: string
           longs_used?: number
-          period_start?: string
           shorts_used?: number
           updated_at?: string
           user_id?: string
+          window_start?: string
         }
         Relationships: []
       }
@@ -262,6 +262,9 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_reset_usage: { Args: { _target: string }; Returns: undefined }
+      consume_quota: { Args: { _format: string }; Returns: Json }
+      get_my_usage: { Args: never; Returns: Json }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
