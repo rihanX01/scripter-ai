@@ -1,4 +1,4 @@
-import { createFileRoute, Outlet, Navigate } from "@tanstack/react-router";
+import { createFileRoute, Outlet, Navigate, useRouterState } from "@tanstack/react-router";
 import { useAuth } from "@/hooks/use-auth";
 import { Loader2 } from "lucide-react";
 
@@ -8,7 +8,8 @@ export const Route = createFileRoute("/_authenticated")({
 
 function Layout() {
   const { user, loading } = useAuth();
+  const path = useRouterState({ select: (r) => r.location.pathname });
   if (loading) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="size-6 animate-spin text-muted-foreground"/></div>;
-  if (!user) return <Navigate to="/login" />;
+  if (!user) return <Navigate to={path.startsWith("/admin") ? "/admin/login" : "/login"} />;
   return <Outlet />;
 }
