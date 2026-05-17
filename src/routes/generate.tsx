@@ -779,8 +779,6 @@ function ResearchView({ research }: { research: DeepResearchResult }) {
       `## Sources`,
       ...research.sources.map((s) => `- [${s.title}](${s.url}) — ${s.snippet}`),
       ``,
-      `## Research-backed script`,
-      research.script,
     ].join("\n");
     const blob = new Blob([md], { type: "text/markdown" });
     const url = URL.createObjectURL(blob);
