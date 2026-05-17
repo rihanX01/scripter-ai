@@ -18,6 +18,7 @@ const researchInputSchema = z.object({
   topic: z.string().trim().min(3).max(500),
   language: z.enum(["english", "hindi", "hinglish"]).default("english"),
   script: z.string().trim().max(20000).optional(),
+  format: z.enum(["short", "long"]).optional(),
 });
 
 export type DeepResearchResult = {
@@ -309,7 +310,7 @@ const RESEARCH_TOOL = [{
         sources: {
           type: "array",
           minItems: 5,
-          maxItems: 15,
+          maxItems: 30,
           items: {
             type: "object",
             additionalProperties: false,
@@ -360,8 +361,12 @@ RULES:
 - Match the requested language. For hinglish: Roman script, ~95% phonetic Hindi + common loan-words; never full English.
 - Reply via the emit_research tool only.`;
 
+    const isLong = data.format === "long" || (data.script?.split(/\s+/).length ?? 0) > 250;
+    const sourceFloor = isLong ? 12 : 5;
     const user = `TOPIC: ${data.topic}
 OUTPUT LANGUAGE (for script + summary): ${data.language}
+FORMAT: ${data.format ?? "unspecified"}
+SOURCES REQUIREMENT: provide AT LEAST ${sourceFloor} distinct, credible, verifiable source links${isLong ? " (long-form scripts need deep sourcing — aim for 12–20 sources spanning primary research, news, official orgs, and books)" : ""}. Each source must be real and independently verifiable. Never invent URLs.
 ${data.script ? `\nBASE SCRIPT (research MUST be grounded in and expand on this script — extract claims, verify them, find sources that support/contextualize each beat, and rewrite the final "script" field as a research-backed version of this):\n"""\n${data.script}\n"""\n` : ""}
 Do deep research and emit the structured payload now.`;
 

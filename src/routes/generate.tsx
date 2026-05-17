@@ -76,7 +76,7 @@ function GeneratePage() {
   });
 
   const researchMutation = useMutation({
-    mutationFn: (input: { topic: string; language: Form["language"]; script?: string }) => researchFn({ data: input }),
+    mutationFn: (input: { topic: string; language: Form["language"]; script?: string; format?: Form["format"] }) => researchFn({ data: input }),
     onSuccess: (data) => {
       setResearch(data);
       setResearchOpen(true);
@@ -103,7 +103,7 @@ function GeneratePage() {
     mutation.mutate(form);
     if (researchEnabled && isPaid) {
       setResearch(null);
-      researchMutation.mutate({ topic: form.topic, language: form.language });
+      researchMutation.mutate({ topic: form.topic, language: form.language, format: form.format });
     }
   };
 
@@ -352,7 +352,7 @@ function GeneratePage() {
                           type="button"
                           onClick={() => {
                             setResearch(null);
-                            researchMutation.mutate({ topic: form.topic, language: form.language, script: result?.script });
+                            researchMutation.mutate({ topic: form.topic, language: form.language, script: result?.script, format: form.format });
                             setResearchOpen(true);
                           }}
                           className="rounded-lg px-3 py-2 text-xs font-medium bg-gradient-to-r from-[var(--plasma)] to-[var(--neon)] text-background inline-flex items-center gap-1.5"
@@ -779,8 +779,6 @@ function ResearchView({ research }: { research: DeepResearchResult }) {
       `## Sources`,
       ...research.sources.map((s) => `- [${s.title}](${s.url}) — ${s.snippet}`),
       ``,
-      `## Research-backed script`,
-      research.script,
     ].join("\n");
     const blob = new Blob([md], { type: "text/markdown" });
     const url = URL.createObjectURL(blob);
@@ -792,7 +790,6 @@ function ResearchView({ research }: { research: DeepResearchResult }) {
   return (
     <div className="min-w-0">
       <div className="flex flex-wrap items-center justify-end gap-2 mb-4">
-        <CopyBtn text={research.script} />
         <button onClick={downloadMd} className="btn-hero rounded-xl px-3 py-2 text-xs inline-flex items-center gap-1.5">
           <Download className="size-3.5" /> .md
         </button>
@@ -853,14 +850,6 @@ function ResearchView({ research }: { research: DeepResearchResult }) {
         </Section>
       </div>
 
-      <div className="mt-5">
-        <Section title="Research-backed script">
-          <div className="glass rounded-xl p-4 text-sm leading-relaxed whitespace-pre-line font-display">
-            <div className="flex justify-end mb-2"><CopyBtn text={research.script} /></div>
-            {research.script}
-          </div>
-        </Section>
-      </div>
     </div>
   );
 }
