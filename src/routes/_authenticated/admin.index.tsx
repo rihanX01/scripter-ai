@@ -24,9 +24,25 @@ function Stat({ icon: Icon, label, value, accent }: { icon: any; label: string; 
 
 function Overview() {
   const fn = useServerFn(getAdminOverview);
-  const { data, isLoading } = useQuery({ queryKey: ["admin-overview"], queryFn: () => fn() });
+  const { data, isLoading, isError, error, refetch } = useQuery({
+    queryKey: ["admin-overview"],
+    queryFn: () => fn(),
+    retry: 1,
+  });
 
   if (isLoading || !data) return <div className="text-muted-foreground">Loading dashboard…</div>;
+  if (isError) {
+    return (
+      <div className="space-y-4">
+        <h1 className="font-display text-3xl font-bold">Overview</h1>
+        <Card className="glass-strong p-5 border-border/40">
+          <div className="font-display font-semibold">Dashboard data did not load</div>
+          <p className="text-sm text-muted-foreground mt-1">{error instanceof Error ? error.message : "Please retry the secure admin request."}</p>
+          <button onClick={() => refetch()} className="mt-4 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm">Retry</button>
+        </Card>
+      </div>
+    );
+  }
 
   const planData = [
     { name: "Free", value: data.planCounts.free, color: "oklch(0.7 0.04 260)" },
