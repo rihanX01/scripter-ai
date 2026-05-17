@@ -14,6 +14,21 @@ const inputSchema = z.object({
 
 export type GenerateInput = z.infer<typeof inputSchema>;
 
+const researchInputSchema = z.object({
+  topic: z.string().trim().min(3).max(500),
+  language: z.enum(["english", "hindi", "hinglish"]).default("english"),
+});
+
+export type DeepResearchResult = {
+  topic: string;
+  summary: string;
+  key_findings: string[];
+  stats: { label: string; value: string }[];
+  angles: string[];
+  sources: { title: string; url: string; snippet: string }[];
+  script: string;
+};
+
 export type Scene = {
   line: string;
   image_prompt: string;
