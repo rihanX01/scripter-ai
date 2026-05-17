@@ -258,7 +258,7 @@ function GeneratePage() {
               </div>
               {isPaid && researchEnabled && (
                 <p className="mt-2 text-[10px] text-muted-foreground font-mono">
-                  Research will run automatically after the script generates, grounded in it.
+                  Research runs in parallel with script generation.
                 </p>
               )}
 
