@@ -371,7 +371,7 @@ RULES:
     const user = `TOPIC: ${data.topic}
 OUTPUT LANGUAGE (for script + summary): ${data.language}
 FORMAT: ${data.format ?? "unspecified"}
-SOURCES REQUIREMENT: provide AT LEAST ${sourceFloor} distinct, credible, verifiable source links${isLong ? " (long-form scripts need deep sourcing — aim for 12–20 sources spanning primary research, news, official orgs, and books)" : ""}. Each source must be real and independently verifiable. Never invent URLs.
+SOURCES REQUIREMENT: provide AT LEAST ${sourceFloor * 2} distinct, credible, verifiable source links${isLong ? " (long-form scripts need deep sourcing — aim for 20–30 sources spanning primary research, news, official orgs, and books)" : ""}. Each URL MUST be a real, currently-live page you are highly confident exists (dead links will be silently dropped, so over-cite from stable canonical sources). Never invent URLs or guess slugs.
 ${data.script ? `\nBASE SCRIPT (research MUST be grounded in and expand on this script — extract claims, verify them, find sources that support/contextualize each beat, and rewrite the final "script" field as a research-backed version of this):\n"""\n${data.script}\n"""\n` : ""}
 Do deep research and emit the structured payload now.`;
 
