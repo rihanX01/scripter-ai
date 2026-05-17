@@ -216,29 +216,41 @@ function GeneratePage() {
                 )}
               </button>
 
-              <button
-                type="button"
-                disabled={!isPaid || researchMutation.isPending || form.topic.trim().length < 3}
-                onClick={() => {
-                  if (!isPaid) return;
-                  setResearch(null);
-                  researchMutation.mutate({ topic: form.topic, language: form.language });
-                }}
-                title={isPaid ? "Deep Research with credible sources" : "Upgrade to Pro or Max to unlock Deep Research"}
-                className={`w-full mt-2 rounded-xl py-3 inline-flex items-center justify-center gap-2 text-sm font-medium transition-all border ${
+              <div
+                className={`w-full mt-2 rounded-xl py-3 px-4 flex items-center justify-between gap-3 text-sm font-medium transition-all border ${
                   isPaid
-                    ? "border-[var(--plasma)]/40 bg-[var(--plasma)]/10 hover:bg-[var(--plasma)]/20 text-foreground"
-                    : "border-white/10 bg-white/[0.02] text-muted-foreground cursor-not-allowed"
-                } disabled:opacity-60`}
+                    ? "border-[var(--plasma)]/40 bg-[var(--plasma)]/10"
+                    : "border-white/10 bg-white/[0.02] text-muted-foreground"
+                }`}
+                title={isPaid ? "Toggle Deep Research with credible sources" : "Upgrade to Pro or Max to unlock Deep Research"}
               >
-                {researchMutation.isPending ? (
-                  <><Loader2 className="size-4 animate-spin" /> Researching the web…</>
-                ) : isPaid ? (
-                  <><Telescope className="size-4" /> Deep Research + Sources</>
-                ) : (
-                  <><Lock className="size-3.5" /> Deep Research · Pro / Max</>
-                )}
-              </button>
+                <div className="flex items-center gap-2 min-w-0">
+                  {isPaid ? <Telescope className="size-4 shrink-0" /> : <Lock className="size-3.5 shrink-0" />}
+                  <span className="truncate">
+                    {researchMutation.isPending
+                      ? "Researching the web…"
+                      : isPaid
+                        ? "Deep Research + Sources"
+                        : "Deep Research · Pro / Max"}
+                  </span>
+                  {researchMutation.isPending && <Loader2 className="size-3.5 animate-spin shrink-0" />}
+                </div>
+                <Switch
+                  checked={researchEnabled}
+                  disabled={!isPaid || researchMutation.isPending}
+                  onCheckedChange={(checked) => {
+                    if (!isPaid) return;
+                    setResearchEnabled(checked);
+                    if (checked) {
+                      if (form.topic.trim().length < 3) return;
+                      setResearch(null);
+                      researchMutation.mutate({ topic: form.topic, language: form.language });
+                    } else {
+                      setResearch(null);
+                    }
+                  }}
+                />
+              </div>
 
               {researchMutation.error && (
                 <div className="mt-3 text-xs text-destructive bg-destructive/10 border border-destructive/30 rounded-lg p-3">
