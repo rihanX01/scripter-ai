@@ -403,8 +403,46 @@ Do deep research and emit the structured payload now.`;
     if (!call?.function?.arguments) throw new Error("AI returned no research payload");
     const parsed = JSON.parse(call.function.arguments) as DeepResearchResult;
 
-    // Filter obviously bad URLs
-    parsed.sources = (parsed.sources ?? []).filter((s) => /^https?:\/\//i.test(s.url));
+    // Validate URLs in parallel — drop dead links, replace with Google search fallback so users always get a working link.
+    const rawSources = (parsed.sources ?? []).filter((s) => /^https?:\/\//i.test(s.url));
+    const checked = await Promise.all(
+      rawSources.map(async (s) => {
+        const ok = await checkUrlAlive(s.url);
+        if (ok) return s;
+        // Fallback: Google search for the title — guaranteed-working URL.
+        const q = encodeURIComponent(`${s.title} ${data.topic}`.slice(0, 200));
+        return { ...s, url: `https://www.google.com/search?q=${q}` };
+      })
+    );
+    parsed.sources = checked;
 
     return parsed;
   });
+
+async function checkUrlAlive(url: string): Promise<boolean> {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 5000);
+  try {
+    // Try HEAD first (cheap). Many sites block HEAD — fall back to GET.
+    let res = await fetch(url, {
+      method: "HEAD",
+      redirect: "follow",
+      signal: ctrl.signal,
+      headers: { "User-Agent": "Mozilla/5.0 (compatible; ShortForgeBot/1.0)" },
+    }).catch(() => null);
+    if (!res || res.status === 405 || res.status === 403 || res.status >= 500) {
+      res = await fetch(url, {
+        method: "GET",
+        redirect: "follow",
+        signal: ctrl.signal,
+        headers: { "User-Agent": "Mozilla/5.0 (compatible; ShortForgeBot/1.0)" },
+      }).catch(() => null);
+    }
+    if (!res) return false;
+    return res.status >= 200 && res.status < 400;
+  } catch {
+    return false;
+  } finally {
+    clearTimeout(timer);
+  }
+}
