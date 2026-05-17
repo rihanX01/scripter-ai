@@ -62,6 +62,7 @@ function GeneratePage() {
   const [result, setResult] = useState<GenerateResult | null>(null);
   const [research, setResearch] = useState<DeepResearchResult | null>(null);
   const [researchEnabled, setResearchEnabled] = useState(false);
+  const [researchOpen, setResearchOpen] = useState(true);
 
   const fn = useServerFn(generateScript);
   const usageFn = useServerFn(getMyUsage);
@@ -74,18 +75,26 @@ function GeneratePage() {
     refetchInterval: 60_000,
   });
 
+  const researchMutation = useMutation({
+    mutationFn: (input: { topic: string; language: Form["language"]; script?: string }) => researchFn({ data: input }),
+    onSuccess: (data) => {
+      setResearch(data);
+      setResearchOpen(true);
+    },
+    onError: () => setResearchEnabled(false),
+  });
+
   const mutation = useMutation({
     mutationFn: (input: Form) => fn({ data: input }),
     onSuccess: (data) => {
       setResult(data);
       qc.setQueryData(["my-usage"], data.usage);
+      // Auto-run research after script generates if user toggled it on
+      if (researchEnabled && isPaid && form.topic.trim().length >= 3) {
+        setResearch(null);
+        researchMutation.mutate({ topic: form.topic, language: form.language, script: data.script });
+      }
     },
-  });
-
-  const researchMutation = useMutation({
-    mutationFn: (input: { topic: string; language: Form["language"] }) => researchFn({ data: input }),
-    onSuccess: (data) => setResearch(data),
-    onError: () => setResearchEnabled(false),
   });
 
   const setFormat = (f: "short" | "long") => {
