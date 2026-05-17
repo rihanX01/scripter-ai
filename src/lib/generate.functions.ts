@@ -17,6 +17,7 @@ export type GenerateInput = z.infer<typeof inputSchema>;
 const researchInputSchema = z.object({
   topic: z.string().trim().min(3).max(500),
   language: z.enum(["english", "hindi", "hinglish"]).default("english"),
+  script: z.string().trim().max(20000).optional(),
 });
 
 export type DeepResearchResult = {
