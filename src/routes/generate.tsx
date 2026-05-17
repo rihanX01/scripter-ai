@@ -352,7 +352,7 @@ function GeneratePage() {
                           type="button"
                           onClick={() => {
                             setResearch(null);
-                            researchMutation.mutate({ topic: form.topic, language: form.language, script: result?.script });
+                            researchMutation.mutate({ topic: form.topic, language: form.language, script: result?.script, format: form.format });
                             setResearchOpen(true);
                           }}
                           className="rounded-lg px-3 py-2 text-xs font-medium bg-gradient-to-r from-[var(--plasma)] to-[var(--neon)] text-background inline-flex items-center gap-1.5"
