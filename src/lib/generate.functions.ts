@@ -280,3 +280,120 @@ Generate the script pack now. Be ruthless about quality. No filler. Hook hard. L
 
     return { ...parsed, usage: usageData };
   });
+
+const RESEARCH_TOOL = [{
+  type: "function" as const,
+  function: {
+    name: "emit_research",
+    description: "Return deep research with credible sources and a research-backed script.",
+    parameters: {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        topic: { type: "string" },
+        summary: { type: "string", description: "300-500 word executive summary of the topic." },
+        key_findings: { type: "array", items: { type: "string" }, minItems: 5, maxItems: 12 },
+        stats: {
+          type: "array",
+          minItems: 3,
+          maxItems: 10,
+          items: {
+            type: "object",
+            additionalProperties: false,
+            properties: { label: { type: "string" }, value: { type: "string" } },
+            required: ["label", "value"],
+          },
+        },
+        angles: { type: "array", items: { type: "string" }, minItems: 3, maxItems: 8, description: "Untapped viral video angles." },
+        sources: {
+          type: "array",
+          minItems: 5,
+          maxItems: 15,
+          items: {
+            type: "object",
+            additionalProperties: false,
+            properties: {
+              title: { type: "string" },
+              url: { type: "string", description: "Full https URL to a credible primary source (gov, edu, established news, journals, books, official sites). Never invent URLs — only cite real, verifiable pages." },
+              snippet: { type: "string", description: "1-2 sentence quote or paraphrase from the source." },
+            },
+            required: ["title", "url", "snippet"],
+          },
+        },
+        script: { type: "string", description: "A long-form research-backed viral script (800-1200 words) that weaves in the findings, with hook, escalation, and loop ending." },
+      },
+      required: ["topic", "summary", "key_findings", "stats", "angles", "sources", "script"],
+    },
+  },
+}];
+
+export const deepResearch = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => researchInputSchema.parse(d))
+  .handler(async ({ data, context }): Promise<DeepResearchResult> => {
+    const apiKey = process.env.LOVABLE_API_KEY;
+    if (!apiKey) throw new Error("LOVABLE_API_KEY not configured");
+
+    const { supabase } = context;
+
+    // Gate: paid plans only
+    const { data: profile, error: pErr } = await supabase
+      .from("profiles")
+      .select("plan")
+      .maybeSingle();
+    if (pErr) throw new Error(pErr.message);
+    const plan = (profile?.plan as "free" | "pro" | "max" | undefined) ?? "free";
+    if (plan === "free") {
+      throw new Error("Deep Research is available on Pro and Max plans. Upgrade to unlock.");
+    }
+
+    const system = `You are ShortForge Deep Research — a senior research analyst + viral scriptwriter.
+You produce rigorously sourced research briefs for video creators.
+
+RULES:
+- Cite ONLY real, verifiable sources you are highly confident exist (gov, edu, peer-reviewed journals, established news outlets like BBC/NYT/Reuters/Nature/NASA/WHO, official org sites, well-known books). Never fabricate URLs. If unsure, omit.
+- Prefer primary sources over secondary.
+- Provide concrete numbers, dates, names, places — not vague claims.
+- Surface non-obvious, counter-intuitive angles a viral creator could exploit.
+- The final "script" must be a cinematic, hook-driven, human-sounding viral video script that integrates the research naturally. No "in this video", no AI clichés. Loop the ending.
+- Match the requested language. For hinglish: Roman script, ~95% phonetic Hindi + common loan-words; never full English.
+- Reply via the emit_research tool only.`;
+
+    const user = `TOPIC: ${data.topic}
+OUTPUT LANGUAGE (for script + summary): ${data.language}
+
+Do deep research and emit the structured payload now.`;
+
+    const model = plan === "max" ? "google/gemini-2.5-pro" : "google/gemini-2.5-flash";
+
+    const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model,
+        messages: [
+          { role: "system", content: system },
+          { role: "user", content: user },
+        ],
+        tools: RESEARCH_TOOL,
+        tool_choice: { type: "function", function: { name: "emit_research" } },
+      }),
+    });
+
+    if (!res.ok) {
+      const t = await res.text();
+      if (res.status === 429) throw new Error("Rate limit reached. Please try again in a moment.");
+      if (res.status === 402) throw new Error("AI credits exhausted. Add credits to continue.");
+      throw new Error(`AI gateway error (${res.status}): ${t.slice(0, 200)}`);
+    }
+
+    const json = await res.json();
+    const call = json.choices?.[0]?.message?.tool_calls?.[0];
+    if (!call?.function?.arguments) throw new Error("AI returned no research payload");
+    const parsed = JSON.parse(call.function.arguments) as DeepResearchResult;
+
+    // Filter obviously bad URLs
+    parsed.sources = (parsed.sources ?? []).filter((s) => /^https?:\/\//i.test(s.url));
+
+    return parsed;
+  });
