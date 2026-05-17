@@ -187,8 +187,12 @@ function Landing() {
               { key: "max", name: "Max", price: "$49", tag: "Faceless studios", features: ["20 short scripts", "10 long-form scripts", "Premium AI model", "Strongest hooks", "Highest virality tuning", "Priority queue"], cta: "Go Max", highlight: false },
             ].map((p) => {
               const isCurrent = currentPlan === p.key;
-              // When user is on Max, freeze the other two cards
-              const isFrozen = currentPlan === "max" && p.key !== "max";
+              // Freeze rules:
+              // - On Max: freeze Free and Pro
+              // - On Pro: freeze only Free (Max remains upgradeable)
+              const isFrozen =
+                (currentPlan === "max" && p.key !== "max") ||
+                (currentPlan === "pro" && p.key === "free");
               return (
               <motion.div
                 key={p.name}
