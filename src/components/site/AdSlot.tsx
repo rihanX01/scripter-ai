@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 import { useAuth } from "@/hooks/use-auth";
 
 declare global {
@@ -38,7 +38,6 @@ type Props = {
  */
 export function AdSlot({ slot, format = "auto", layout, className = "", alwaysShow, minHeight = 100 }: Props) {
   const { profile, loading } = useAuth();
-  const ref = useRef<HTMLModElement | null>(null);
 
   const isPaid = profile?.plan === "pro" || profile?.plan === "max";
   const shouldRender = alwaysShow || !isPaid;
@@ -72,7 +71,6 @@ export function AdSlot({ slot, format = "auto", layout, className = "", alwaysSh
   return (
     <div className={`ad-container ${className}`} style={{ minHeight }} aria-label="Advertisement">
       <ins
-        ref={ref}
         className="adsbygoogle"
         style={{ display: "block" }}
         data-ad-client={ADSENSE_CLIENT}
