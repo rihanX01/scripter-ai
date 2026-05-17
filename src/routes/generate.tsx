@@ -89,11 +89,6 @@ function GeneratePage() {
     onSuccess: (data) => {
       setResult(data);
       qc.setQueryData(["my-usage"], data.usage);
-      // Auto-run research after script generates if user toggled it on
-      if (researchEnabled && isPaid && form.topic.trim().length >= 3) {
-        setResearch(null);
-        researchMutation.mutate({ topic: form.topic, language: form.language, script: data.script });
-      }
     },
   });
 
