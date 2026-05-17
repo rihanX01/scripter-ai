@@ -89,11 +89,6 @@ function GeneratePage() {
     onSuccess: (data) => {
       setResult(data);
       qc.setQueryData(["my-usage"], data.usage);
-      // Auto-run research after script generates if user toggled it on
-      if (researchEnabled && isPaid && form.topic.trim().length >= 3) {
-        setResearch(null);
-        researchMutation.mutate({ topic: form.topic, language: form.language, script: data.script });
-      }
     },
   });
 
@@ -106,6 +101,10 @@ function GeneratePage() {
     if (!form.topic.trim() || form.topic.trim().length < 3) return;
     setResult(null);
     mutation.mutate(form);
+    if (researchEnabled && isPaid) {
+      setResearch(null);
+      researchMutation.mutate({ topic: form.topic, language: form.language });
+    }
   };
 
   return (
@@ -259,7 +258,7 @@ function GeneratePage() {
               </div>
               {isPaid && researchEnabled && (
                 <p className="mt-2 text-[10px] text-muted-foreground font-mono">
-                  Research will run automatically after the script generates, grounded in it.
+                  Research runs in parallel with script generation.
                 </p>
               )}
 
@@ -328,8 +327,8 @@ function GeneratePage() {
                 )}
               </AnimatePresence>
 
-              {/* Research panel — only after script is generated, with show/hide toggle */}
-              {result && isPaid && (
+              {/* Research panel — runs in parallel with script generation */}
+              {isPaid && (research || researchMutation.isPending) && (
                 <div className="glass-strong rounded-3xl border border-[var(--plasma)]/30 overflow-hidden">
                   <div className="flex items-center justify-between gap-3 p-4 md:p-5">
                     <div className="flex items-center gap-3 min-w-0">
@@ -353,7 +352,7 @@ function GeneratePage() {
                           type="button"
                           onClick={() => {
                             setResearch(null);
-                            researchMutation.mutate({ topic: form.topic, language: form.language, script: result.script });
+                            researchMutation.mutate({ topic: form.topic, language: form.language, script: result?.script });
                             setResearchOpen(true);
                           }}
                           className="rounded-lg px-3 py-2 text-xs font-medium bg-gradient-to-r from-[var(--plasma)] to-[var(--neon)] text-background inline-flex items-center gap-1.5"
