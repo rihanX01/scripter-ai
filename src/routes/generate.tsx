@@ -6,12 +6,14 @@ import { useEffect, useState } from "react";
 import {
   Sparkles, Wand2, Copy, Check, Download, RotateCcw, ArrowLeft,
   Image as ImageIcon, Video, Hash, Gauge, Film, Loader2, Flame, Timer, Zap,
+  Telescope, Lock, ExternalLink, BookOpen,
 } from "lucide-react";
-import { generateScript, getMyUsage, type GenerateResult } from "@/lib/generate.functions";
+import { generateScript, getMyUsage, deepResearch, type GenerateResult, type DeepResearchResult } from "@/lib/generate.functions";
 import { Nav } from "@/components/site/Nav";
 import { Particles } from "@/components/site/Particles";
 import { AdSlot } from "@/components/site/AdSlot";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/use-auth";
 
 export const Route = createFileRoute("/generate")({
   component: GeneratePage,
@@ -45,6 +47,10 @@ type Form = {
 };
 
 function GeneratePage() {
+  const { profile } = useAuth();
+  const plan = (profile?.plan as "free" | "pro" | "max" | undefined) ?? "free";
+  const isPaid = plan === "pro" || plan === "max";
+
   const [form, setForm] = useState<Form>({
     topic: "",
     category: "auto",
@@ -53,9 +59,11 @@ function GeneratePage() {
     target_words: 95,
   });
   const [result, setResult] = useState<GenerateResult | null>(null);
+  const [research, setResearch] = useState<DeepResearchResult | null>(null);
 
   const fn = useServerFn(generateScript);
   const usageFn = useServerFn(getMyUsage);
+  const researchFn = useServerFn(deepResearch);
   const qc = useQueryClient();
 
   const usageQuery = useQuery({
@@ -70,6 +78,11 @@ function GeneratePage() {
       setResult(data);
       qc.setQueryData(["my-usage"], data.usage);
     },
+  });
+
+  const researchMutation = useMutation({
+    mutationFn: (input: { topic: string; language: Form["language"] }) => researchFn({ data: input }),
+    onSuccess: (data) => setResearch(data),
   });
 
   const setFormat = (f: "short" | "long") => {
@@ -203,6 +216,36 @@ function GeneratePage() {
                 )}
               </button>
 
+              <button
+                type="button"
+                disabled={!isPaid || researchMutation.isPending || form.topic.trim().length < 3}
+                onClick={() => {
+                  if (!isPaid) return;
+                  setResearch(null);
+                  researchMutation.mutate({ topic: form.topic, language: form.language });
+                }}
+                title={isPaid ? "Deep Research with credible sources" : "Upgrade to Pro or Max to unlock Deep Research"}
+                className={`w-full mt-2 rounded-xl py-3 inline-flex items-center justify-center gap-2 text-sm font-medium transition-all border ${
+                  isPaid
+                    ? "border-[var(--plasma)]/40 bg-[var(--plasma)]/10 hover:bg-[var(--plasma)]/20 text-foreground"
+                    : "border-white/10 bg-white/[0.02] text-muted-foreground cursor-not-allowed"
+                } disabled:opacity-60`}
+              >
+                {researchMutation.isPending ? (
+                  <><Loader2 className="size-4 animate-spin" /> Researching the web…</>
+                ) : isPaid ? (
+                  <><Telescope className="size-4" /> Deep Research + Sources</>
+                ) : (
+                  <><Lock className="size-3.5" /> Deep Research · Pro / Max</>
+                )}
+              </button>
+
+              {researchMutation.error && (
+                <div className="mt-3 text-xs text-destructive bg-destructive/10 border border-destructive/30 rounded-lg p-3">
+                  {(researchMutation.error as Error).message}
+                </div>
+              )}
+
               {mutation.error && (
                 <div className="mt-3 text-xs text-destructive bg-destructive/10 border border-destructive/30 rounded-lg p-3">
                   {(mutation.error as Error).message}
@@ -214,6 +257,25 @@ function GeneratePage() {
             <div className="space-y-5">
               {/* Ad: free users only — hidden for pro/max */}
               <AdSlot slot="studio-top" format="horizontal" minHeight={90} />
+
+              <AnimatePresence>
+                {(researchMutation.isPending || research) && (
+                  <motion.div
+                    key="research"
+                    initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+                  >
+                    {researchMutation.isPending && !research ? (
+                      <div className="glass-strong rounded-3xl p-8 text-center">
+                        <Loader2 className="size-6 animate-spin mx-auto mb-3 text-[var(--plasma)]" />
+                        <div className="font-display text-lg">Deep researching the topic…</div>
+                        <div className="text-xs text-muted-foreground mt-1">Pulling findings, stats, and credible sources.</div>
+                      </div>
+                    ) : research ? (
+                      <ResearchView research={research} />
+                    ) : null}
+                  </motion.div>
+                )}
+              </AnimatePresence>
 
               <AnimatePresence mode="wait">
                 {!result && !mutation.isPending && (
