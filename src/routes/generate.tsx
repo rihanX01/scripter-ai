@@ -10,6 +10,7 @@ import {
 import { generateScript, getMyUsage, type GenerateResult } from "@/lib/generate.functions";
 import { Nav } from "@/components/site/Nav";
 import { Particles } from "@/components/site/Particles";
+import { AdSlot } from "@/components/site/AdSlot";
 import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/generate")({
@@ -211,6 +212,9 @@ function GeneratePage() {
 
             {/* OUTPUT PANEL */}
             <div className="space-y-5">
+              {/* Ad: free users only — hidden for pro/max */}
+              <AdSlot slot="studio-top" format="horizontal" minHeight={90} />
+
               <AnimatePresence mode="wait">
                 {!result && !mutation.isPending && (
                   <motion.div
@@ -240,6 +244,9 @@ function GeneratePage() {
                   </motion.div>
                 )}
               </AnimatePresence>
+
+              {/* Ad: free users only — hidden for pro/max */}
+              <AdSlot slot="studio-bottom" format="auto" minHeight={250} />
             </div>
           </div>
         </div>
