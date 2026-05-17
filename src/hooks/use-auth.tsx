@@ -29,21 +29,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   const loadExtras = async (uid: string) => {
-    const [{ data: prof }, { data: roles }] = await Promise.all([
+    const [{ data: prof, error: profileError }, { data: roles, error: rolesError }] = await Promise.all([
       supabase.from("profiles").select("user_id,display_name,avatar_url,plan,is_banned").eq("user_id", uid).maybeSingle(),
       supabase.from("user_roles").select("role").eq("user_id", uid),
     ]);
-    setProfile(prof as Profile | null);
-    setIsAdmin(!!roles?.some((r) => r.role === "admin"));
+    if (profileError) console.error("Profile load failed", profileError);
+    if (rolesError) console.error("Role load failed", rolesError);
+    setProfile(profileError ? null : (prof as Profile | null));
+    setIsAdmin(!rolesError && !!roles?.some((r) => r.role === "admin"));
   };
 
   const refresh = async () => {
     setLoading(true);
     const { data } = await supabase.auth.getSession();
     setSession(data.session);
-    if (data.session?.user) await loadExtras(data.session.user.id);
-    else { setProfile(null); setIsAdmin(false); }
-    setLoading(false);
+    try {
+      if (data.session?.user) await loadExtras(data.session.user.id);
+      else { setProfile(null); setIsAdmin(false); }
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -51,9 +56,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setSession(s);
       if (s?.user) {
         setLoading(true);
-        setTimeout(async () => {
-          await loadExtras(s.user.id);
-          setLoading(false);
+        setTimeout(() => {
+          loadExtras(s.user.id).finally(() => setLoading(false));
         }, 0);
       } else {
         setProfile(null); setIsAdmin(false);
