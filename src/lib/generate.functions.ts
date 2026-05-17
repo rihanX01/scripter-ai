@@ -403,18 +403,12 @@ Do deep research and emit the structured payload now.`;
     if (!call?.function?.arguments) throw new Error("AI returned no research payload");
     const parsed = JSON.parse(call.function.arguments) as DeepResearchResult;
 
-    // Validate URLs in parallel — drop dead links, replace with Google search fallback so users always get a working link.
+    // Validate URLs in parallel — drop any link that doesn't resolve. Only keep real, working URLs.
     const rawSources = (parsed.sources ?? []).filter((s) => /^https?:\/\//i.test(s.url));
     const checked = await Promise.all(
-      rawSources.map(async (s) => {
-        const ok = await checkUrlAlive(s.url);
-        if (ok) return s;
-        // Fallback: Google search for the title — guaranteed-working URL.
-        const q = encodeURIComponent(`${s.title} ${data.topic}`.slice(0, 200));
-        return { ...s, url: `https://www.google.com/search?q=${q}` };
-      })
+      rawSources.map(async (s) => ({ s, ok: await checkUrlAlive(s.url) }))
     );
-    parsed.sources = checked;
+    parsed.sources = checked.filter((x) => x.ok).map((x) => x.s);
 
     return parsed;
   });
