@@ -1,4 +1,4 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate, redirect } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
@@ -11,6 +11,15 @@ import { Shield, Loader2, Eye, EyeOff, Mail, Lock, ArrowLeft } from "lucide-reac
 
 export const Route = createFileRoute("/admin/login")({
   head: () => ({ meta: [{ title: "Admin Sign In — ShortForge AI" }] }),
+  beforeLoad: async () => {
+    const { data } = await supabase.auth.getSession();
+    if (!data.session?.user) return;
+    const { data: roles } = await supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", data.session.user.id);
+    if (roles?.some((r) => r.role === "admin")) throw redirect({ to: "/admin" });
+  },
   component: AdminLoginPage,
 });
 
@@ -22,7 +31,7 @@ const fieldCls =
 function AdminLoginPage() {
   const nav = useNavigate();
   const record = useServerFn(recordAdminLogin);
-  const { refresh } = useAuth();
+  const { refresh, loading, isAdmin } = useAuth();
   const [email, setEmail] = useState(ADMIN_EMAIL);
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
@@ -30,18 +39,9 @@ function AdminLoginPage() {
   const [attempts, setAttempts] = useState(0);
   const [lockUntil, setLockUntil] = useState<number | null>(null);
 
-  // If already logged in as admin, fast-forward.
   useEffect(() => {
-    (async () => {
-      const { data } = await supabase.auth.getSession();
-      if (!data.session?.user) return;
-      const { data: roles } = await supabase
-        .from("user_roles").select("role").eq("user_id", data.session.user.id);
-      if (roles?.some((r) => r.role === "admin")) {
-        nav({ to: "/admin", replace: true });
-      }
-    })();
-  }, [nav]);
+    if (!loading && isAdmin) nav({ to: "/admin", replace: true });
+  }, [isAdmin, loading, nav]);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -80,7 +80,7 @@ function AdminLoginPage() {
       sessionStorage.setItem("admin_login_at", String(Date.now()));
       await refresh();
       toast.success("Welcome, Administrator.");
-      await nav({ to: "/admin", replace: true });
+      window.location.assign("/admin");
     } catch (err: any) {
       toast.error(err?.message ?? "Sign-in failed");
     } finally {
