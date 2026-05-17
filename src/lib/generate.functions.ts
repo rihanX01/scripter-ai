@@ -354,6 +354,11 @@ You produce rigorously sourced research briefs for video creators.
 
 RULES:
 - Cite ONLY real, verifiable sources you are highly confident exist (gov, edu, peer-reviewed journals, established news outlets like BBC/NYT/Reuters/Nature/NASA/WHO, official org sites, well-known books). Never fabricate URLs. If unsure, omit.
+- URL POLICY (CRITICAL — links must not 404):
+  * Strongly prefer STABLE canonical URLs: Wikipedia article pages (https://en.wikipedia.org/wiki/...), official homepages (https://www.nasa.gov, https://www.who.int), DOI links (https://doi.org/10.xxxx/xxxxx), arXiv abstract pages (https://arxiv.org/abs/XXXX.XXXXX), PubMed (https://pubmed.ncbi.nlm.nih.gov/ID/), Britannica topic pages.
+  * AVOID deep article paths on news sites (bbc.com/news/world-xxx-12345678, nytimes.com/2019/...) unless you are 100% certain the exact slug exists — these rot and 404. Prefer the topic landing page or Wikipedia summary of the event instead.
+  * NEVER include tracking params, query strings, fragments unless essential. No shortened links (bit.ly, t.co).
+  * If you cannot recall an exact verifiable URL for a claim, cite the Wikipedia page on the topic OR omit the source entirely. Do NOT guess slugs or IDs.
 - Prefer primary sources over secondary.
 - Provide concrete numbers, dates, names, places — not vague claims.
 - Surface non-obvious, counter-intuitive angles a viral creator could exploit.
@@ -398,8 +403,46 @@ Do deep research and emit the structured payload now.`;
     if (!call?.function?.arguments) throw new Error("AI returned no research payload");
     const parsed = JSON.parse(call.function.arguments) as DeepResearchResult;
 
-    // Filter obviously bad URLs
-    parsed.sources = (parsed.sources ?? []).filter((s) => /^https?:\/\//i.test(s.url));
+    // Validate URLs in parallel — drop dead links, replace with Google search fallback so users always get a working link.
+    const rawSources = (parsed.sources ?? []).filter((s) => /^https?:\/\//i.test(s.url));
+    const checked = await Promise.all(
+      rawSources.map(async (s) => {
+        const ok = await checkUrlAlive(s.url);
+        if (ok) return s;
+        // Fallback: Google search for the title — guaranteed-working URL.
+        const q = encodeURIComponent(`${s.title} ${data.topic}`.slice(0, 200));
+        return { ...s, url: `https://www.google.com/search?q=${q}` };
+      })
+    );
+    parsed.sources = checked;
 
     return parsed;
   });
+
+async function checkUrlAlive(url: string): Promise<boolean> {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 5000);
+  try {
+    // Try HEAD first (cheap). Many sites block HEAD — fall back to GET.
+    let res = await fetch(url, {
+      method: "HEAD",
+      redirect: "follow",
+      signal: ctrl.signal,
+      headers: { "User-Agent": "Mozilla/5.0 (compatible; ShortForgeBot/1.0)" },
+    }).catch(() => null);
+    if (!res || res.status === 405 || res.status === 403 || res.status >= 500) {
+      res = await fetch(url, {
+        method: "GET",
+        redirect: "follow",
+        signal: ctrl.signal,
+        headers: { "User-Agent": "Mozilla/5.0 (compatible; ShortForgeBot/1.0)" },
+      }).catch(() => null);
+    }
+    if (!res) return false;
+    return res.status >= 200 && res.status < 400;
+  } catch {
+    return false;
+  } finally {
+    clearTimeout(timer);
+  }
+}
