@@ -9,6 +9,7 @@ import {
 import { getViralIdeas, type IdeaResult, type ViralIdea } from "@/lib/ideas.functions";
 import { Nav } from "@/components/site/Nav";
 import { Particles } from "@/components/site/Particles";
+import { AdSlot } from "@/components/site/AdSlot";
 import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/ideas")({
@@ -185,6 +186,9 @@ function IdeasPage() {
             {mut.isPending ? <><Loader2 className="size-4 animate-spin"/> Brewing viral ideas…</> : <><Sparkles className="size-4"/> Generate Ideas</>}
           </button>
         </div>
+
+        {/* AdSense slot — free users only */}
+        <AdSlot slot="ideas-top" format="horizontal" minHeight={120} className="mb-8" />
 
         {/* Results */}
         <AnimatePresence>
