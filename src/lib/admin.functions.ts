@@ -125,12 +125,12 @@ export const updatePlanLimit = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({
     plan: z.enum(["free", "pro", "max"]),
-    shorts_limit: z.number().int().min(0).max(10000),
-    longs_limit: z.number().int().min(0).max(10000),
-    ad_free: z.boolean(),
-    priority_queue: z.boolean(),
+    shorts_limit: z.coerce.number().int().min(0).max(100000),
+    longs_limit: z.coerce.number().int().min(0).max(100000),
+    ad_free: z.coerce.boolean(),
+    priority_queue: z.coerce.boolean(),
     ai_model: z.string().min(2).max(100),
-    price_usd: z.number().min(0).max(100000),
+    price_usd: z.coerce.number().min(0).max(100000),
   }).parse(d))
   .handler(async ({ context, data }) => {
     await assertAdmin(context.userId);
