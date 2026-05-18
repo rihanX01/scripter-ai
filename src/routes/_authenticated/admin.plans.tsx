@@ -23,6 +23,7 @@ function PlanCard({ plan: initial }: { plan: Plan }) {
     shorts_limit: Number(x.shorts_limit) || 0,
     longs_limit: Number(x.longs_limit) || 0,
     ideas_limit: Number(x.ideas_limit) || 0,
+    ideas_per_request_limit: Number(x.ideas_per_request_limit) || 3,
     ad_free: !!x.ad_free,
     priority_queue: !!x.priority_queue,
   });
