@@ -195,9 +195,9 @@ function Landing() {
 
           <div className="grid md:grid-cols-3 gap-5">
             {[
-              { key: "free", name: "Free", priceUsd: 0, tag: "Try the engine", features: ["2 short scripts", "1 long-form script", "Per-line scene prompts", "Full SEO pack", "Ads enabled"], cta: "Start free", highlight: false },
-              { key: "pro", name: "Pro", priceUsd: 19, tag: "Creators", features: ["10 short scripts", "6 long-form scripts", "Faster generation", "Better AI quality", "Ad-free", "Save history"], cta: "Go Pro", highlight: true },
-              { key: "max", name: "Max", priceUsd: 49, tag: "Faceless studios", features: ["20 short scripts", "10 long-form scripts", "Premium AI model", "Strongest hooks", "Highest virality tuning", "Priority queue"], cta: "Go Max", highlight: false },
+              { key: "free", name: "Free", priceUsd: prices.free, tag: "Try the engine", features: ["2 short scripts", "1 long-form script", "Per-line scene prompts", "Full SEO pack", "Ads enabled"], cta: "Start free", highlight: false },
+              { key: "pro", name: "Pro", priceUsd: prices.pro, tag: "Creators", features: ["10 short scripts", "6 long-form scripts", "Faster generation", "Better AI quality", "Ad-free", "Save history"], cta: "Go Pro", highlight: true },
+              { key: "max", name: "Max", priceUsd: prices.max, tag: "Faceless studios", features: ["20 short scripts", "10 long-form scripts", "Premium AI model", "Strongest hooks", "Highest virality tuning", "Priority queue"], cta: "Go Max", highlight: false },
             ].map((p) => {
               const isCurrent = currentPlan === p.key;
               // Freeze rules:
