@@ -1,12 +1,12 @@
 import { createFileRoute, Link, redirect, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
-  Lightbulb, Sparkles, Loader2, Copy, Check, Flame, ArrowLeft, Wand2, Hash,
+  Lightbulb, Sparkles, Loader2, Copy, Check, Flame, ArrowLeft, Wand2, Hash, Lock,
 } from "lucide-react";
-import { getViralIdeas, type IdeaResult, type ViralIdea } from "@/lib/ideas.functions";
+import { getViralIdeas, getIdeasUsage, type IdeaResult, type ViralIdea } from "@/lib/ideas.functions";
 import { Nav } from "@/components/site/Nav";
 import { Particles } from "@/components/site/Particles";
 import { AdSlot } from "@/components/site/AdSlot";
@@ -44,6 +44,23 @@ type Form = {
 function IdeasPage() {
   const navigate = useNavigate();
   const fn = useServerFn(getViralIdeas);
+  const usageFn = useServerFn(getIdeasUsage);
+  const qc = useQueryClient();
+
+  const { data: usage } = useQuery({
+    queryKey: ["ideas-usage"],
+    queryFn: () => usageFn(),
+    refetchOnWindowFocus: true,
+  });
+
+  const perReqCap = Math.max(1, Math.min(15, usage?.ideas_per_request_limit ?? 15));
+  const dailyLimit = usage?.ideas_limit ?? 0;
+  const dailyUsed = usage?.ideas_used ?? 0;
+  const dailyRemaining = Math.max(0, dailyLimit - dailyUsed);
+  const limitReached = !!usage && dailyRemaining <= 0;
+  const resetHrs = usage?.reset_at
+    ? Math.max(0, Math.ceil((new Date(usage.reset_at).getTime() - Date.now()) / 3_600_000))
+    : 0;
 
   const [form, setForm] = useState<Form>({
     category: "auto",
@@ -53,11 +70,20 @@ function IdeasPage() {
     audience: "",
     vibe: "",
   });
+
+  useEffect(() => {
+    setForm((f) => (f.count > perReqCap ? { ...f, count: perReqCap } : f));
+  }, [perReqCap]);
+
   const [result, setResult] = useState<IdeaResult | null>(null);
 
   const mut = useMutation({
-    mutationFn: (input: Form) => fn({ data: input }),
-    onSuccess: (data) => setResult(data),
+    mutationFn: (input: Form) => fn({ data: { ...input, count: Math.min(input.count, perReqCap) } }),
+    onSuccess: (data) => {
+      setResult(data);
+      qc.invalidateQueries({ queryKey: ["ideas-usage"] });
+    },
+    onError: () => qc.invalidateQueries({ queryKey: ["ideas-usage"] }),
   });
 
   return (
@@ -164,13 +190,29 @@ function IdeasPage() {
             </div>
 
             <div className="md:col-span-2">
-              <label className="text-xs font-mono text-muted-foreground mb-2 block">HOW MANY IDEAS · {form.count}</label>
+              <div className="flex items-center justify-between mb-2">
+                <label className="text-xs font-mono text-muted-foreground block">HOW MANY IDEAS · {form.count}</label>
+                <span className="text-[10px] font-mono text-muted-foreground">
+                  Max {perReqCap} per request · {usage?.plan?.toUpperCase() ?? "FREE"} plan
+                </span>
+              </div>
               <input
-                type="range" min={3} max={15} step={1}
-                value={form.count}
-                onChange={(e) => setForm((f) => ({ ...f, count: Number(e.target.value) }))}
+                type="range" min={3} max={Math.max(3, perReqCap)} step={1}
+                value={Math.min(form.count, perReqCap)}
+                onChange={(e) => setForm((f) => ({ ...f, count: Math.min(Number(e.target.value), perReqCap) }))}
                 className="w-full accent-[var(--neon)]"
+                disabled={limitReached}
               />
+              {usage && (
+                <div className="mt-2 text-[11px] font-mono text-muted-foreground flex items-center justify-between">
+                  <span>Today: {dailyUsed}/{dailyLimit} generations</span>
+                  {limitReached ? (
+                    <span className="text-destructive">Resets in ~{resetHrs}h</span>
+                  ) : (
+                    <span>{dailyRemaining} left</span>
+                  )}
+                </div>
+              )}
             </div>
           </div>
 
@@ -180,11 +222,22 @@ function IdeasPage() {
 
           <button
             onClick={() => mut.mutate(form)}
-            disabled={mut.isPending}
+            disabled={mut.isPending || limitReached}
             className="btn-hero rounded-2xl px-6 py-3 mt-6 w-full sm:w-auto inline-flex items-center justify-center gap-2 font-medium disabled:opacity-50"
           >
-            {mut.isPending ? <><Loader2 className="size-4 animate-spin"/> Brewing viral ideas…</> : <><Sparkles className="size-4"/> Generate Ideas</>}
+            {mut.isPending ? (
+              <><Loader2 className="size-4 animate-spin"/> Brewing viral ideas…</>
+            ) : limitReached ? (
+              <><Lock className="size-4"/> Daily limit reached · resets in ~{resetHrs}h</>
+            ) : (
+              <><Sparkles className="size-4"/> Generate Ideas</>
+            )}
           </button>
+          {limitReached && (
+            <Link to="/" className="block mt-3 text-center text-xs text-[var(--neon)] underline-offset-4 hover:underline">
+              Upgrade your plan for more daily idea generations →
+            </Link>
+          )}
         </div>
 
         {/* AdSense slot — free users only */}

@@ -12,7 +12,7 @@ import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/admin/plans")({ component: PlansPage });
 
-type Plan = { plan: "free" | "pro" | "max"; shorts_limit: number; longs_limit: number; ideas_limit: number; ad_free: boolean; priority_queue: boolean; ai_model: string; price_usd: number };
+type Plan = { plan: "free" | "pro" | "max"; shorts_limit: number; longs_limit: number; ideas_limit: number; ideas_per_request_limit: number; ad_free: boolean; priority_queue: boolean; ai_model: string; price_usd: number };
 
 function PlanCard({ plan: initial }: { plan: Plan }) {
   const upd = useServerFn(updatePlanLimit);
@@ -23,6 +23,7 @@ function PlanCard({ plan: initial }: { plan: Plan }) {
     shorts_limit: Number(x.shorts_limit) || 0,
     longs_limit: Number(x.longs_limit) || 0,
     ideas_limit: Number(x.ideas_limit) || 0,
+    ideas_per_request_limit: Number(x.ideas_per_request_limit) || 3,
     ad_free: !!x.ad_free,
     priority_queue: !!x.priority_queue,
   });
@@ -55,6 +56,7 @@ function PlanCard({ plan: initial }: { plan: Plan }) {
         <div><Label>Short generations / month</Label><Input type="number" value={p.shorts_limit} onChange={(e) => setP({ ...p, shorts_limit: e.target.value === "" ? 0 : parseInt(e.target.value, 10) })}/></div>
         <div><Label>Long generations / day</Label><Input type="number" value={p.longs_limit} onChange={(e) => setP({ ...p, longs_limit: e.target.value === "" ? 0 : parseInt(e.target.value, 10) })}/></div>
         <div><Label>Idea generations / day</Label><Input type="number" value={p.ideas_limit} onChange={(e) => setP({ ...p, ideas_limit: e.target.value === "" ? 0 : parseInt(e.target.value, 10) })}/></div>
+        <div><Label>Ideas per single request (slider cap)</Label><Input type="number" value={p.ideas_per_request_limit} onChange={(e) => setP({ ...p, ideas_per_request_limit: e.target.value === "" ? 1 : parseInt(e.target.value, 10) })}/></div>
         <div><Label>AI Model</Label><Input value={p.ai_model} onChange={(e) => setP({ ...p, ai_model: e.target.value })}/></div>
         <div className="flex items-center justify-between"><Label>Ad-free</Label><Switch checked={p.ad_free} onCheckedChange={(v) => setP({ ...p, ad_free: v })}/></div>
         <div className="flex items-center justify-between"><Label>Priority queue</Label><Switch checked={p.priority_queue} onCheckedChange={(v) => setP({ ...p, priority_queue: v })}/></div>
