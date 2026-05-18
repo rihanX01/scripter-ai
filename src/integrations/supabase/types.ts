@@ -178,6 +178,7 @@ export type Database = {
           ad_free: boolean
           ai_model: string
           ideas_limit: number
+          ideas_per_request_limit: number
           longs_limit: number
           plan: Database["public"]["Enums"]["subscription_plan"]
           price_usd: number
@@ -189,6 +190,7 @@ export type Database = {
           ad_free?: boolean
           ai_model: string
           ideas_limit?: number
+          ideas_per_request_limit?: number
           longs_limit: number
           plan: Database["public"]["Enums"]["subscription_plan"]
           price_usd?: number
@@ -200,6 +202,7 @@ export type Database = {
           ad_free?: boolean
           ai_model?: string
           ideas_limit?: number
+          ideas_per_request_limit?: number
           longs_limit?: number
           plan?: Database["public"]["Enums"]["subscription_plan"]
           price_usd?: number
