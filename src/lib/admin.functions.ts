@@ -8,6 +8,7 @@ const DEFAULT_PLAN_LIMITS = [
     plan: "free" as const,
     shorts_limit: 3,
     longs_limit: 1,
+    ideas_limit: 3,
     ad_free: false,
     priority_queue: false,
     ai_model: "google/gemini-2.5-flash",
@@ -17,6 +18,7 @@ const DEFAULT_PLAN_LIMITS = [
     plan: "pro" as const,
     shorts_limit: 50,
     longs_limit: 20,
+    ideas_limit: 30,
     ad_free: true,
     priority_queue: true,
     ai_model: "google/gemini-2.5-flash",
@@ -26,6 +28,7 @@ const DEFAULT_PLAN_LIMITS = [
     plan: "max" as const,
     shorts_limit: 500,
     longs_limit: 200,
+    ideas_limit: 200,
     ad_free: true,
     priority_queue: true,
     ai_model: "google/gemini-2.5-pro",
@@ -175,6 +178,7 @@ export const updatePlanLimit = createServerFn({ method: "POST" })
     plan: z.enum(["free", "pro", "max"]),
     shorts_limit: z.coerce.number().int().min(0).max(100000),
     longs_limit: z.coerce.number().int().min(0).max(100000),
+    ideas_limit: z.coerce.number().int().min(0).max(100000),
     ad_free: z.coerce.boolean(),
     priority_queue: z.coerce.boolean(),
     ai_model: z.string().min(2).max(100),
@@ -185,7 +189,7 @@ export const updatePlanLimit = createServerFn({ method: "POST" })
     await ensurePlanLimitRows();
     const { error } = await supabaseAdmin.from("plan_limits").upsert({
       plan: data.plan,
-      shorts_limit: data.shorts_limit, longs_limit: data.longs_limit,
+      shorts_limit: data.shorts_limit, longs_limit: data.longs_limit, ideas_limit: data.ideas_limit,
       ad_free: data.ad_free, priority_queue: data.priority_queue, ai_model: data.ai_model,
       price_usd: data.price_usd,
     }, { onConflict: "plan" });

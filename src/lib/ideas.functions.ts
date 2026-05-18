@@ -84,6 +84,16 @@ const tools = [{
   },
 }];
 
+function parseQuotaError(message: string): string {
+  const m = message.match(/QUOTA_EXCEEDED:(short|long|ideas):(\d+):(\d+):(.+)/);
+  if (!m) return message;
+  const [, fmt, used, limit, reset] = m;
+  const resetDate = new Date(reset);
+  const hrs = Math.max(0, Math.ceil((resetDate.getTime() - Date.now()) / 3_600_000));
+  const label = fmt === "ideas" ? "idea generation" : `${fmt} script`;
+  return `Daily ${label} limit reached (${used}/${limit}). Resets in ~${hrs}h. Upgrade your plan for more.`;
+}
+
 export const getViralIdeas = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => inputSchema.parse(d))
@@ -93,9 +103,10 @@ export const getViralIdeas = createServerFn({ method: "POST" })
 
     const { supabase } = context;
 
-    // Resolve plan -> model
-    const { data: profile } = await supabase.from("profiles").select("plan").maybeSingle();
-    const plan = (profile?.plan as "free" | "pro" | "max" | undefined) ?? "free";
+    // 1. Atomically check + consume the user's idea-generation quota
+    const { data: usage, error: quotaErr } = await supabase.rpc("consume_quota", { _format: "ideas" });
+    if (quotaErr) throw new Error(parseQuotaError(quotaErr.message));
+    const plan = ((usage as { plan?: string } | null)?.plan as "free" | "pro" | "max" | undefined) ?? "free";
     const model = plan === "max" ? "google/gemini-2.5-pro" : "google/gemini-2.5-flash";
 
     const userPrompt = `CATEGORY: ${data.category}${data.category === "auto" ? " (pick the hottest sub-niches across all categories)" : ""}
@@ -121,6 +132,7 @@ Generate ${data.count} world-class viral ideas now. Be ruthless about originalit
 
     if (!res.ok) {
       const t = await res.text();
+      console.error("ideas: AI gateway error", res.status, t.slice(0, 500));
       if (res.status === 429) throw new Error("Rate limit reached. Please try again in a moment.");
       if (res.status === 402) throw new Error("AI credits exhausted. Add credits to continue.");
       throw new Error(`AI gateway error (${res.status}): ${t.slice(0, 200)}`);
@@ -128,6 +140,16 @@ Generate ${data.count} world-class viral ideas now. Be ruthless about originalit
 
     const json = await res.json();
     const call = json.choices?.[0]?.message?.tool_calls?.[0];
-    if (!call?.function?.arguments) throw new Error("AI returned no ideas payload");
-    return JSON.parse(call.function.arguments) as IdeaResult;
+    const rawArgs = call?.function?.arguments;
+    if (!rawArgs) {
+      const fallback = json.choices?.[0]?.message?.content;
+      console.error("ideas: missing tool_call payload", JSON.stringify(json).slice(0, 800));
+      throw new Error(typeof fallback === "string" && fallback ? fallback.slice(0, 300) : "AI returned no ideas payload");
+    }
+    try {
+      return JSON.parse(rawArgs) as IdeaResult;
+    } catch (e) {
+      console.error("ideas: parse failure", rawArgs?.slice?.(0, 500));
+      throw new Error("AI returned malformed ideas payload");
+    }
   });

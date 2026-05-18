@@ -12,7 +12,7 @@ import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/admin/plans")({ component: PlansPage });
 
-type Plan = { plan: "free" | "pro" | "max"; shorts_limit: number; longs_limit: number; ad_free: boolean; priority_queue: boolean; ai_model: string; price_usd: number };
+type Plan = { plan: "free" | "pro" | "max"; shorts_limit: number; longs_limit: number; ideas_limit: number; ad_free: boolean; priority_queue: boolean; ai_model: string; price_usd: number };
 
 function PlanCard({ plan: initial }: { plan: Plan }) {
   const upd = useServerFn(updatePlanLimit);
@@ -22,6 +22,7 @@ function PlanCard({ plan: initial }: { plan: Plan }) {
     price_usd: Number(x.price_usd) || 0,
     shorts_limit: Number(x.shorts_limit) || 0,
     longs_limit: Number(x.longs_limit) || 0,
+    ideas_limit: Number(x.ideas_limit) || 0,
     ad_free: !!x.ad_free,
     priority_queue: !!x.priority_queue,
   });
