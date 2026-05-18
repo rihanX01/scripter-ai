@@ -33,11 +33,12 @@ export const Route = createFileRoute("/generate")({
 const CATEGORIES = [
   "auto","Horror","Mystery","What If","Educational","Facts","Storytelling",
   "Emotional","Documentary","Motivation","Dark Psychology","Sci-fi",
-  "Space","History","Cinematic","Conspiracy","Viral",
+  "Space","History","Cinematic","Conspiracy","Viral","Podcast",
 ];
 
 const SHORT_PRESETS = [60, 86, 100, 150];
 const LONG_PRESETS  = [500, 800, 1100, 1500];
+const LONG_PRESETS_MAX = [500, 1100, 2000, 3500, 5000];
 
 type Form = {
   topic: string;
@@ -45,6 +46,7 @@ type Form = {
   language: "english" | "hindi" | "hinglish";
   format: "short" | "long";
   target_words: number;
+  podcast_questions: number;
 };
 
 function GeneratePage() {
@@ -58,6 +60,7 @@ function GeneratePage() {
     language: "english",
     format: "short",
     target_words: 95,
+    podcast_questions: 10,
   });
   const [result, setResult] = useState<GenerateResult | null>(null);
 
@@ -107,9 +110,18 @@ function GeneratePage() {
     },
   });
 
+  const isPodcast = form.category.toLowerCase() === "podcast";
+
   const setFormat = (f: "short" | "long") => {
     setForm((p) => ({ ...p, format: f, target_words: f === "short" ? 95 : 900 }));
   };
+
+  // When switching to Podcast, force long format
+  useEffect(() => {
+    if (isPodcast && form.format !== "long") {
+      setForm((p) => ({ ...p, format: "long", target_words: 900 }));
+    }
+  }, [isPodcast, form.format]);
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -188,26 +200,58 @@ function GeneratePage() {
                 </div>
               </Field>
 
-              <Field label={`Target words · ${form.target_words}`}>
-                <div className="flex flex-wrap gap-2 mb-2">
-                  {(form.format === "short" ? SHORT_PRESETS : LONG_PRESETS).map((w) => (
-                    <button key={w} type="button"
-                      onClick={() => setForm({ ...form, target_words: w })}
-                      className={`rounded-lg px-3 py-1.5 text-xs font-mono transition-all ${
-                        form.target_words === w ? "bg-[var(--neon)] text-background" : "glass hover:bg-white/5"
-                      }`}>{w}w</button>
-                  ))}
-                </div>
-                <input
-                  type="range"
-                  min={form.format === "short" ? 40 : 300}
-                  max={form.format === "short" ? 250 : 2000}
-                  step={form.format === "short" ? 5 : 50}
-                  value={form.target_words}
-                  onChange={(e) => setForm({ ...form, target_words: Number(e.target.value) })}
-                  className="w-full accent-[var(--neon)]"
-                />
-              </Field>
+              {!isPodcast && (
+                <Field label={`Target words · ${form.target_words}${plan === "max" && form.format === "long" ? " · MAX custom" : ""}`}>
+                  <div className="flex flex-wrap gap-2 mb-2">
+                    {(form.format === "short"
+                      ? SHORT_PRESETS
+                      : plan === "max" ? LONG_PRESETS_MAX : LONG_PRESETS
+                    ).map((w) => (
+                      <button key={w} type="button"
+                        onClick={() => setForm({ ...form, target_words: w })}
+                        className={`rounded-lg px-3 py-1.5 text-xs font-mono transition-all ${
+                          form.target_words === w ? "bg-[var(--neon)] text-background" : "glass hover:bg-white/5"
+                        }`}>{w}w</button>
+                    ))}
+                  </div>
+                  <input
+                    type="range"
+                    min={form.format === "short" ? 40 : 300}
+                    max={form.format === "short" ? 250 : (plan === "max" ? 5000 : 2000)}
+                    step={form.format === "short" ? 5 : 50}
+                    value={form.target_words}
+                    onChange={(e) => setForm({ ...form, target_words: Number(e.target.value) })}
+                    className="w-full accent-[var(--neon)]"
+                  />
+                  {plan === "max" && form.format === "long" && (
+                    <p className="mt-1 text-[10px] font-mono text-[var(--plasma)]">Custom length up to 5000 words — Max exclusive</p>
+                  )}
+                </Field>
+              )}
+
+              {isPodcast && (
+                <Field label={`Killer Questions · ${form.podcast_questions}`}>
+                  <div className="flex flex-wrap gap-2 mb-2">
+                    {[5, 10, 15, 20, 25].map((n) => (
+                      <button key={n} type="button"
+                        onClick={() => setForm({ ...form, podcast_questions: n })}
+                        className={`rounded-lg px-3 py-1.5 text-xs font-mono transition-all ${
+                          form.podcast_questions === n ? "bg-[var(--plasma)] text-background" : "glass hover:bg-white/5"
+                        }`}>{n}</button>
+                    ))}
+                  </div>
+                  <input
+                    type="range"
+                    min={3}
+                    max={30}
+                    step={1}
+                    value={form.podcast_questions}
+                    onChange={(e) => setForm({ ...form, podcast_questions: Number(e.target.value) })}
+                    className="w-full accent-[var(--plasma)]"
+                  />
+                  <p className="mt-1 text-[10px] font-mono text-[var(--plasma)]">Deep-research on guest/topic + killer interview questions — Max exclusive</p>
+                </Field>
+              )}
 
               <Field label="Language">
                 <div className="grid grid-cols-3 gap-2">
@@ -224,14 +268,21 @@ function GeneratePage() {
               <Field label="Category">
                 <select
                   value={form.category}
-                  onChange={(e) => setForm({ ...form, category: e.target.value })}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    if (v.toLowerCase() === "podcast" && plan !== "max") return;
+                    setForm({ ...form, category: v });
+                  }}
                   className="w-full bg-input/40 border border-white/10 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-[var(--neon)] transition-all"
                 >
-                  {CATEGORIES.map((c) => (
-                    <option key={c} value={c} className="bg-card">
-                      {c === "auto" ? "🪄 Auto-detect (recommended)" : c}
-                    </option>
-                  ))}
+                  {CATEGORIES.map((c) => {
+                    const locked = c.toLowerCase() === "podcast" && plan !== "max";
+                    return (
+                      <option key={c} value={c} disabled={locked} className="bg-card">
+                        {c === "auto" ? "🪄 Auto-detect (recommended)" : c}{locked ? " 🔒 Max only" : c.toLowerCase() === "podcast" ? " 🎙️ Max" : ""}
+                      </option>
+                    );
+                  })}
                 </select>
               </Field>
 

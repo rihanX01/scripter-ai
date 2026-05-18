@@ -197,7 +197,7 @@ function Landing() {
             {[
               { key: "free", name: "Free", priceUsd: prices.free, tag: "Try the engine", features: ["2 short scripts", "1 long-form script", "Per-line scene prompts", "Full SEO pack", "Get Idea — 8 viral ideas / run", "Ads enabled"], cta: "Start free", highlight: false },
               { key: "pro", name: "Pro", priceUsd: prices.pro, tag: "Creators", features: ["10 short scripts", "6 long-form scripts", "Faster generation", "Better AI quality", "Get Idea — up to 15 ideas / run", "Ad-free", "Save history"], cta: "Go Pro", highlight: true },
-              { key: "max", name: "Max", priceUsd: prices.max, tag: "Faceless studios", features: ["20 short scripts", "10 long-form scripts", "Premium AI model", "Strongest hooks", "Get Idea — premium model, deepest angles", "Highest virality tuning", "Priority queue"], cta: "Go Max", highlight: false },
+              { key: "max", name: "Max", priceUsd: prices.max, tag: "Faceless studios", features: ["20 short scripts", "10 long-form scripts", "Premium AI model", "🎙️ Podcast category — deep research + killer interview questions", "Custom long-form script length (up to 5000 words)", "Strongest hooks", "Get Idea — premium model, deepest angles", "Highest virality tuning", "Priority queue"], cta: "Go Max", highlight: false },
             ].map((p) => {
               const isCurrent = currentPlan === p.key;
               // Freeze rules:
