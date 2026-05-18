@@ -130,12 +130,14 @@ export const updatePlanLimit = createServerFn({ method: "POST" })
     ad_free: z.boolean(),
     priority_queue: z.boolean(),
     ai_model: z.string().min(2).max(100),
+    price_usd: z.number().min(0).max(100000),
   }).parse(d))
   .handler(async ({ context, data }) => {
     await assertAdmin(context.userId);
     const { error } = await supabaseAdmin.from("plan_limits").update({
       shorts_limit: data.shorts_limit, longs_limit: data.longs_limit,
       ad_free: data.ad_free, priority_queue: data.priority_queue, ai_model: data.ai_model,
+      price_usd: data.price_usd,
     }).eq("plan", data.plan);
     if (error) throw new Error(error.message);
     await audit(context.userId, "update_plan_limit", null, data);
