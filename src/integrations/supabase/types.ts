@@ -74,6 +74,21 @@ export type Database = {
         }
         Relationships: []
       }
+      admin_presence: {
+        Row: {
+          admin_id: string
+          last_seen_at: string
+        }
+        Insert: {
+          admin_id: string
+          last_seen_at?: string
+        }
+        Update: {
+          admin_id?: string
+          last_seen_at?: string
+        }
+        Relationships: []
+      }
       announcements: {
         Row: {
           active: boolean
@@ -251,6 +266,74 @@ export type Database = {
         }
         Relationships: []
       }
+      support_messages: {
+        Row: {
+          body: string
+          created_at: string
+          id: string
+          sender_id: string | null
+          sender_type: Database["public"]["Enums"]["ticket_sender"]
+          ticket_id: string
+        }
+        Insert: {
+          body: string
+          created_at?: string
+          id?: string
+          sender_id?: string | null
+          sender_type: Database["public"]["Enums"]["ticket_sender"]
+          ticket_id: string
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          id?: string
+          sender_id?: string | null
+          sender_type?: Database["public"]["Enums"]["ticket_sender"]
+          ticket_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "support_messages_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "support_tickets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      support_tickets: {
+        Row: {
+          assigned_admin_id: string | null
+          created_at: string
+          id: string
+          last_message_at: string
+          status: Database["public"]["Enums"]["ticket_status"]
+          subject: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          assigned_admin_id?: string | null
+          created_at?: string
+          id?: string
+          last_message_at?: string
+          status?: Database["public"]["Enums"]["ticket_status"]
+          subject?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          assigned_admin_id?: string | null
+          created_at?: string
+          id?: string
+          last_message_at?: string
+          status?: Database["public"]["Enums"]["ticket_status"]
+          subject?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       usage_counters: {
         Row: {
           id: string
@@ -323,6 +406,8 @@ export type Database = {
       app_role: "admin" | "moderator" | "user"
       content_language: "english" | "hindi" | "hinglish"
       subscription_plan: "free" | "pro" | "max"
+      ticket_sender: "user" | "ai" | "admin"
+      ticket_status: "open" | "live" | "closed"
       video_format: "short" | "long"
     }
     CompositeTypes: {
@@ -454,6 +539,8 @@ export const Constants = {
       app_role: ["admin", "moderator", "user"],
       content_language: ["english", "hindi", "hinglish"],
       subscription_plan: ["free", "pro", "max"],
+      ticket_sender: ["user", "ai", "admin"],
+      ticket_status: ["open", "live", "closed"],
       video_format: ["short", "long"],
     },
   },
