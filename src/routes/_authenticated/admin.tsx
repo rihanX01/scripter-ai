@@ -1,9 +1,11 @@
 import { createFileRoute, Outlet, Link, useRouterState, Navigate } from "@tanstack/react-router";
 import { useEffect, useRef } from "react";
+import { useServerFn } from "@tanstack/react-start";
 import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
+import { adminHeartbeat } from "@/lib/support.functions";
 import { toast } from "sonner";
-import { LayoutDashboard, Users, Settings2, Megaphone, ToggleLeft, FileText, Shield, ArrowLeft, Loader2 } from "lucide-react";
+import { LayoutDashboard, Users, Settings2, Megaphone, ToggleLeft, FileText, Shield, ArrowLeft, Loader2, LifeBuoy } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/admin")({
   head: () => ({ meta: [{ title: "Admin — ShortForge AI" }] }),
@@ -13,6 +15,7 @@ export const Route = createFileRoute("/_authenticated/admin")({
 const navItems = [
   { to: "/admin", label: "Overview", icon: LayoutDashboard, exact: true },
   { to: "/admin/users", label: "Users", icon: Users },
+  { to: "/admin/support", label: "Support", icon: LifeBuoy },
   { to: "/admin/plans", label: "Plan Limits", icon: Settings2 },
   { to: "/admin/announcements", label: "Announcements", icon: Megaphone },
   { to: "/admin/flags", label: "Feature Flags", icon: ToggleLeft },
@@ -46,6 +49,17 @@ function AdminLayout() {
       if (timerRef.current) window.clearTimeout(timerRef.current);
     };
   }, [isAdmin]);
+
+  // Presence heartbeat: marks this admin as online to users.
+  const heartbeatFn = useServerFn(adminHeartbeat);
+  useEffect(() => {
+    if (!isAdmin) return;
+    let cancelled = false;
+    const ping = () => { heartbeatFn().catch(() => {}); };
+    ping();
+    const id = window.setInterval(() => { if (!cancelled) ping(); }, 60_000);
+    return () => { cancelled = true; window.clearInterval(id); };
+  }, [isAdmin, heartbeatFn]);
 
   if (loading) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="size-6 animate-spin text-muted-foreground"/></div>;
   if (!isAdmin) return <Navigate to="/admin/login" />;

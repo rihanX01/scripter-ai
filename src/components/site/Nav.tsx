@@ -1,6 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { motion } from "framer-motion";
-import { Sparkles, Shield, Lightbulb } from "lucide-react";
+import { Sparkles, Shield, Lightbulb, LifeBuoy } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 
 export function Nav() {
@@ -35,6 +35,11 @@ export function Nav() {
                 <Lightbulb className="size-3.5"/> Get Idea
               </Link>
             )}
+            {user && (
+              <Link to="/help" className="flex items-center gap-1 hover:text-foreground transition-colors">
+                <LifeBuoy className="size-3.5"/> Help
+              </Link>
+            )}
             {isAdmin && (
               <Link to="/admin" className="flex items-center gap-1 text-[var(--neon)] hover:text-foreground transition-colors">
                 <Shield className="size-3.5"/> Admin
@@ -48,6 +53,9 @@ export function Nav() {
                 {/* Mobile Get Idea */}
                 <Link to="/ideas" className="md:hidden text-xs text-muted-foreground hover:text-foreground inline-flex items-center gap-1 px-2">
                   <Lightbulb className="size-3.5"/> Idea
+                </Link>
+                <Link to="/help" className="md:hidden text-xs text-muted-foreground hover:text-foreground inline-flex items-center gap-1 px-2">
+                  <LifeBuoy className="size-3.5"/> Help
                 </Link>
                 <Link to="/generate" className="btn-hero rounded-xl px-4 py-2 text-sm">Studio →</Link>
                 <button onClick={signOut} className="text-xs text-muted-foreground hover:text-foreground px-2">Sign out</button>
