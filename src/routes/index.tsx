@@ -30,6 +30,7 @@ const categories = [
 function Landing() {
   const { profile } = useAuth();
   const currentPlan = profile?.plan ?? null;
+  const region = useRegionPrice();
   return (
     <div className="relative min-h-screen overflow-hidden">
       <Nav />
