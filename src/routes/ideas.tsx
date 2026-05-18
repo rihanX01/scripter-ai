@@ -190,13 +190,29 @@ function IdeasPage() {
             </div>
 
             <div className="md:col-span-2">
-              <label className="text-xs font-mono text-muted-foreground mb-2 block">HOW MANY IDEAS · {form.count}</label>
+              <div className="flex items-center justify-between mb-2">
+                <label className="text-xs font-mono text-muted-foreground block">HOW MANY IDEAS · {form.count}</label>
+                <span className="text-[10px] font-mono text-muted-foreground">
+                  Max {perReqCap} per request · {usage?.plan?.toUpperCase() ?? "FREE"} plan
+                </span>
+              </div>
               <input
-                type="range" min={3} max={15} step={1}
-                value={form.count}
-                onChange={(e) => setForm((f) => ({ ...f, count: Number(e.target.value) }))}
+                type="range" min={3} max={Math.max(3, perReqCap)} step={1}
+                value={Math.min(form.count, perReqCap)}
+                onChange={(e) => setForm((f) => ({ ...f, count: Math.min(Number(e.target.value), perReqCap) }))}
                 className="w-full accent-[var(--neon)]"
+                disabled={limitReached}
               />
+              {usage && (
+                <div className="mt-2 text-[11px] font-mono text-muted-foreground flex items-center justify-between">
+                  <span>Today: {dailyUsed}/{dailyLimit} generations</span>
+                  {limitReached ? (
+                    <span className="text-destructive">Resets in ~{resetHrs}h</span>
+                  ) : (
+                    <span>{dailyRemaining} left</span>
+                  )}
+                </div>
+              )}
             </div>
           </div>
 
