@@ -179,6 +179,7 @@ export type Database = {
           ai_model: string
           longs_limit: number
           plan: Database["public"]["Enums"]["subscription_plan"]
+          price_usd: number
           priority_queue: boolean
           shorts_limit: number
           updated_at: string
@@ -188,6 +189,7 @@ export type Database = {
           ai_model: string
           longs_limit: number
           plan: Database["public"]["Enums"]["subscription_plan"]
+          price_usd?: number
           priority_queue?: boolean
           shorts_limit: number
           updated_at?: string
@@ -197,6 +199,7 @@ export type Database = {
           ai_model?: string
           longs_limit?: number
           plan?: Database["public"]["Enums"]["subscription_plan"]
+          price_usd?: number
           priority_queue?: boolean
           shorts_limit?: number
           updated_at?: string
