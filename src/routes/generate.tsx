@@ -60,6 +60,7 @@ function GeneratePage() {
     language: "english",
     format: "short",
     target_words: 95,
+    podcast_questions: 10,
   });
   const [result, setResult] = useState<GenerateResult | null>(null);
 
