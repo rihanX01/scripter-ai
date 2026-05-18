@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { X, Megaphone, CheckCircle2, AlertTriangle, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -35,6 +35,7 @@ function getDismissed(): string[] {
 export function AnnouncementBanner() {
   const [items, setItems] = useState<Announcement[]>([]);
   const [dismissed, setDismissed] = useState<string[]>([]);
+  const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setDismissed(getDismissed());
@@ -59,6 +60,23 @@ export function AnnouncementBanner() {
   }, []);
 
   const visible = items.filter((a) => !dismissed.includes(a.id));
+
+  // Publish banner height as a CSS variable so the fixed nav can offset itself.
+  useEffect(() => {
+    const el = ref.current;
+    const setVar = (h: number) => {
+      document.documentElement.style.setProperty("--announcement-h", `${h}px`);
+    };
+    if (!el || !visible.length) {
+      setVar(0);
+      return;
+    }
+    setVar(el.offsetHeight);
+    const ro = new ResizeObserver(() => setVar(el.offsetHeight));
+    ro.observe(el);
+    return () => { ro.disconnect(); setVar(0); };
+  }, [visible.length]);
+
   if (!visible.length) return null;
 
   const dismiss = (id: string) => {
@@ -68,14 +86,17 @@ export function AnnouncementBanner() {
   };
 
   return (
-    <div className="sticky top-0 z-50 w-full space-y-1 px-2 pt-2">
+    <div
+      ref={ref}
+      className="fixed top-0 left-0 right-0 z-[60] w-full space-y-1 px-2 pt-2"
+    >
       {visible.map((a) => {
         const Icon = variantIcons[a.variant] ?? Megaphone;
         return (
           <div
             key={a.id}
             className={cn(
-              "mx-auto flex max-w-6xl items-start gap-3 rounded-xl border px-4 py-2.5 backdrop-blur-md shadow-sm",
+              "mx-auto flex max-w-6xl items-start gap-3 rounded-xl border px-4 py-2.5 backdrop-blur-md shadow-lg",
               variantStyles[a.variant] ?? variantStyles.info,
             )}
             role="status"
