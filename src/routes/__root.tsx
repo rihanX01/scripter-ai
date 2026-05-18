@@ -121,6 +121,7 @@ function RootComponent() {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
+        <AnnouncementBanner />
         <Outlet />
         <Toaster position="top-center" richColors />
       </AuthProvider>
