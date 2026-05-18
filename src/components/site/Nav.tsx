@@ -1,6 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { motion } from "framer-motion";
-import { Sparkles, Shield } from "lucide-react";
+import { Sparkles, Shield, Lightbulb } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 
 export function Nav() {
@@ -30,6 +30,11 @@ export function Nav() {
           <nav className="hidden md:flex items-center gap-7 text-sm text-muted-foreground">
             <a href="#features" className="hover:text-foreground transition-colors">Features</a>
             <a href="#pricing" className="hover:text-foreground transition-colors">Pricing</a>
+            {user && (
+              <Link to="/ideas" className="flex items-center gap-1 hover:text-foreground transition-colors">
+                <Lightbulb className="size-3.5"/> Get Idea
+              </Link>
+            )}
             {isAdmin && (
               <Link to="/admin" className="flex items-center gap-1 text-[var(--neon)] hover:text-foreground transition-colors">
                 <Shield className="size-3.5"/> Admin
@@ -40,6 +45,10 @@ export function Nav() {
           <div className="flex items-center gap-2">
             {user ? (
               <>
+                {/* Mobile Get Idea */}
+                <Link to="/ideas" className="md:hidden text-xs text-muted-foreground hover:text-foreground inline-flex items-center gap-1 px-2">
+                  <Lightbulb className="size-3.5"/> Idea
+                </Link>
                 <Link to="/generate" className="btn-hero rounded-xl px-4 py-2 text-sm">Studio →</Link>
                 <button onClick={signOut} className="text-xs text-muted-foreground hover:text-foreground px-2">Sign out</button>
               </>
