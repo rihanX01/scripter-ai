@@ -33,11 +33,12 @@ export const Route = createFileRoute("/generate")({
 const CATEGORIES = [
   "auto","Horror","Mystery","What If","Educational","Facts","Storytelling",
   "Emotional","Documentary","Motivation","Dark Psychology","Sci-fi",
-  "Space","History","Cinematic","Conspiracy","Viral",
+  "Space","History","Cinematic","Conspiracy","Viral","Podcast",
 ];
 
 const SHORT_PRESETS = [60, 86, 100, 150];
 const LONG_PRESETS  = [500, 800, 1100, 1500];
+const LONG_PRESETS_MAX = [500, 1100, 2000, 3500, 5000];
 
 type Form = {
   topic: string;
@@ -45,6 +46,7 @@ type Form = {
   language: "english" | "hindi" | "hinglish";
   format: "short" | "long";
   target_words: number;
+  podcast_questions: number;
 };
 
 function GeneratePage() {
