@@ -1,7 +1,7 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { Nav } from "@/components/site/Nav";
 import { listMyTickets, createTicket, isHumanOnline } from "@/lib/support.functions";
 import { Plus, MessageCircle, Loader2, Circle } from "lucide-react";
@@ -17,8 +17,8 @@ function HelpPage() {
   const onlineFn = useServerFn(isHumanOnline);
   const createFn = useServerFn(createTicket);
   const qc = useQueryClient();
+  const navigate = useNavigate();
   const [subject, setSubject] = useState("");
-  const seededRef = useRef(false);
 
   const tickets = useQuery({ queryKey: ["my-tickets"], queryFn: () => listFn(), refetchInterval: 8000 });
   const online = useQuery({ queryKey: ["human-online"], queryFn: () => onlineFn(), refetchInterval: 30000 });
@@ -28,18 +28,10 @@ function HelpPage() {
     onSuccess: ({ id }) => {
       setSubject("");
       qc.invalidateQueries({ queryKey: ["my-tickets"] });
-      window.location.assign(`/help/${id}`);
+      navigate({ to: "/help/$ticketId", params: { ticketId: id } });
     },
     onError: (e: any) => toast.error(e?.message ?? "Couldn't create ticket"),
   });
-
-  // Auto-create first ticket if user has none
-  useEffect(() => {
-    if (tickets.data && tickets.data.length === 0 && !seededRef.current && !create.isPending) {
-      seededRef.current = true;
-      create.mutate("Support request");
-    }
-  }, [tickets.data, create]);
 
   return (
     <div className="min-h-screen pt-24 pb-24 px-6">
@@ -97,8 +89,8 @@ function HelpPage() {
               <StatusBadge status={t.status} />
             </Link>
           ))}
-          {tickets.data && tickets.data.length === 0 && !create.isPending && (
-            <div className="text-sm text-muted-foreground">No tickets yet — opening your first chat…</div>
+          {tickets.data && tickets.data.length === 0 && (
+            <div className="text-sm text-muted-foreground">No tickets yet — start a new chat above.</div>
           )}
         </div>
       </div>
