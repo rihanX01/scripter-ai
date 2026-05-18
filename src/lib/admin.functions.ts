@@ -3,6 +3,52 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
+const DEFAULT_PLAN_LIMITS = [
+  {
+    plan: "free" as const,
+    shorts_limit: 3,
+    longs_limit: 1,
+    ad_free: false,
+    priority_queue: false,
+    ai_model: "google/gemini-2.5-flash",
+    price_usd: 0,
+  },
+  {
+    plan: "pro" as const,
+    shorts_limit: 50,
+    longs_limit: 20,
+    ad_free: true,
+    priority_queue: true,
+    ai_model: "google/gemini-2.5-flash",
+    price_usd: 19,
+  },
+  {
+    plan: "max" as const,
+    shorts_limit: 500,
+    longs_limit: 200,
+    ad_free: true,
+    priority_queue: true,
+    ai_model: "google/gemini-2.5-pro",
+    price_usd: 49,
+  },
+];
+
+async function ensurePlanLimitRows() {
+  const { data, error } = await supabaseAdmin.from("plan_limits").select("plan");
+  if (error) throw new Error(error.message);
+
+  const existing = new Set((data ?? []).map((row: { plan: string }) => row.plan));
+  const missing = DEFAULT_PLAN_LIMITS.filter((row) => !existing.has(row.plan));
+
+  if (!missing.length) return;
+
+  const { error: upsertError } = await supabaseAdmin
+    .from("plan_limits")
+    .upsert(missing, { onConflict: "plan" });
+
+  if (upsertError) throw new Error(upsertError.message);
+}
+
 async function assertAdmin(userId: string) {
   const { data, error } = await supabaseAdmin
     .from("user_roles")
@@ -24,6 +70,7 @@ export const getAdminOverview = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     await assertAdmin(context.userId);
+    await ensurePlanLimitRows();
     const [users, gens, recentGens, planBreakdown, last7] = await Promise.all([
       supabaseAdmin.from("profiles").select("*", { count: "exact", head: true }),
       supabaseAdmin.from("generations").select("*", { count: "exact", head: true }),
@@ -116,6 +163,7 @@ export const listPlanLimits = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     await assertAdmin(context.userId);
+    await ensurePlanLimitRows();
     const { data, error } = await supabaseAdmin.from("plan_limits").select("*").order("plan");
     if (error) throw new Error(error.message);
     return data ?? [];
@@ -134,11 +182,13 @@ export const updatePlanLimit = createServerFn({ method: "POST" })
   }).parse(d))
   .handler(async ({ context, data }) => {
     await assertAdmin(context.userId);
-    const { error } = await supabaseAdmin.from("plan_limits").update({
+    await ensurePlanLimitRows();
+    const { error } = await supabaseAdmin.from("plan_limits").upsert({
+      plan: data.plan,
       shorts_limit: data.shorts_limit, longs_limit: data.longs_limit,
       ad_free: data.ad_free, priority_queue: data.priority_queue, ai_model: data.ai_model,
       price_usd: data.price_usd,
-    }).eq("plan", data.plan);
+    }, { onConflict: "plan" });
     if (error) throw new Error(error.message);
     await audit(context.userId, "update_plan_limit", null, data);
     return { ok: true };
