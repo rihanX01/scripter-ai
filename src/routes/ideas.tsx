@@ -1,12 +1,12 @@
 import { createFileRoute, Link, redirect, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
-  Lightbulb, Sparkles, Loader2, Copy, Check, Flame, ArrowLeft, Wand2, Hash,
+  Lightbulb, Sparkles, Loader2, Copy, Check, Flame, ArrowLeft, Wand2, Hash, Lock,
 } from "lucide-react";
-import { getViralIdeas, type IdeaResult, type ViralIdea } from "@/lib/ideas.functions";
+import { getViralIdeas, getIdeasUsage, type IdeaResult, type ViralIdea } from "@/lib/ideas.functions";
 import { Nav } from "@/components/site/Nav";
 import { Particles } from "@/components/site/Particles";
 import { AdSlot } from "@/components/site/AdSlot";
