@@ -33,6 +33,15 @@ function Landing() {
   const { profile } = useAuth();
   const currentPlan = profile?.plan ?? null;
   const region = useRegionPrice();
+  const [prices, setPrices] = useState<Record<string, number>>({ free: 0, pro: 19, max: 49 });
+  useEffect(() => {
+    supabase.from("plan_limits").select("plan,price_usd").then(({ data }) => {
+      if (!data) return;
+      const next: Record<string, number> = { free: 0, pro: 19, max: 49 };
+      data.forEach((r: any) => { next[r.plan] = Number(r.price_usd) || 0; });
+      setPrices(next);
+    });
+  }, []);
   return (
     <div className="relative min-h-screen overflow-hidden">
       <Nav />
