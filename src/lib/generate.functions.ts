@@ -211,8 +211,24 @@ export const generateScript = createServerFn({ method: "POST" })
 
     const { supabase, userId } = context;
 
-    // 1. Atomically check + consume quota (uses real plan from DB, not client input)
-    const { data: usage, error: quotaErr } = await supabase.rpc("consume_quota", { _format: data.format });
+    const isPodcast = data.category.toLowerCase() === "podcast";
+
+    // Resolve plan early to gate Podcast & custom long-length
+    const { data: profileRow } = await supabase.from("profiles").select("plan").maybeSingle();
+    const plan = (profileRow?.plan as "free" | "pro" | "max" | undefined) ?? "free";
+
+    if (isPodcast && plan !== "max") {
+      throw new Error("Podcast category is exclusive to the Max plan. Upgrade to unlock deep-research interview question packs.");
+    }
+
+    // Enforce custom long-length cap by plan (non-max capped at 2000)
+    if (data.target_words && plan !== "max" && data.target_words > 2000) {
+      throw new Error("Custom script length above 2000 words is exclusive to the Max plan.");
+    }
+
+    // 1. Atomically check + consume quota (podcast counts as 'long')
+    const quotaFormat = isPodcast ? "long" : data.format;
+    const { data: usage, error: quotaErr } = await supabase.rpc("consume_quota", { _format: quotaFormat });
     if (quotaErr) throw new Error(parseQuotaError(quotaErr.message));
     const usageData = usage as GenerateResult["usage"];
 
@@ -226,8 +242,23 @@ export const generateScript = createServerFn({ method: "POST" })
     const targetWords = data.target_words ?? (data.format === "short" ? 95 : 900);
     const minW = Math.max(40, Math.round(targetWords * 0.95));
     const maxW = Math.round(targetWords * 1.05);
+    const qCount = data.podcast_questions ?? 10;
 
-    const userPrompt = `TOPIC: ${data.topic}
+    const userPrompt = isPodcast
+      ? `TOPIC / GUEST: ${data.topic}
+LANGUAGE: ${data.language}
+MODE: PODCAST INTERVIEW QUESTION PACK
+NUMBER OF QUESTIONS: exactly ${qCount}
+
+Do deep research on the person, brand, or topic above. Surface their backstory, controversies, defining moments, lesser-known facts, philosophies, contradictions, recent news, and untapped angles. Then craft EXACTLY ${qCount} KILLER podcast questions a top interviewer (Joe Rogan / Lex Fridman / Raj Shamani / BeerBiceps tier) would ask — questions that make the guest pause, reveal something new, or break the internet.
+
+Return the result via emit_script_pack:
+- "script": numbered list of all ${qCount} questions, one per line (format: "1. <question>\\n2. <question>\\n…"). No intro, no outro, no commentary — just the questions.
+- "scenes": one scene per question (so scenes.length == ${qCount}). Each scene's "line" is the question; image_prompt/video_prompt should describe a cinematic podcast studio shot framing this question moment (e.g. dimly-lit studio, two mic setup, intense close-up on guest reacting).
+- "detected_category": "Podcast".
+- "word_count": total words across all questions combined.
+- "seo": titles/descriptions/hashtags tuned for the podcast episode.`
+      : `TOPIC: ${data.topic}
 CATEGORY: ${data.category}${data.category === "auto" ? " (auto-detect the BEST viral category)" : ""}
 LANGUAGE: ${data.language}
 FORMAT: ${data.format === "short" ? "SHORT (viral YouTube Short)" : "LONG (cinematic long-form)"}
