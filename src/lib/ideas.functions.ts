@@ -55,16 +55,12 @@ const tools = [{
     description: "Return a list of viral video ideas for the given category.",
     parameters: {
       type: "object",
-      additionalProperties: false,
       properties: {
         category: { type: "string" },
         ideas: {
           type: "array",
-          minItems: 3,
-          maxItems: 15,
           items: {
             type: "object",
-            additionalProperties: false,
             properties: {
               title: { type: "string" },
               hook: { type: "string" },
@@ -73,7 +69,7 @@ const tools = [{
               target_emotion: { type: "string" },
               thumbnail_text: { type: "string" },
               estimated_virality: { type: "integer" },
-              hashtags: { type: "array", items: { type: "string" }, minItems: 8, maxItems: 12 },
+              hashtags: { type: "array", items: { type: "string" } },
             },
             required: ["title","hook","angle","why_viral","target_emotion","thumbnail_text","estimated_virality","hashtags"],
           },
