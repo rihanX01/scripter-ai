@@ -6,7 +6,7 @@ import { useAuth } from "@/hooks/use-auth";
 export function Nav() {
   const { user, isAdmin, signOut } = useAuth();
   return (
-    <header className="fixed top-0 left-0 right-0 z-50">
+    <header className="fixed left-0 right-0 z-40" style={{ top: "var(--announcement-h, 0px)" }}>
       <div className="mx-auto max-w-7xl px-6 py-4">
         <motion.div
           initial={{ opacity: 0, y: -12 }}
