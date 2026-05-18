@@ -50,6 +50,17 @@ function AdminLayout() {
     };
   }, [isAdmin]);
 
+  // Presence heartbeat: marks this admin as online to users.
+  const heartbeatFn = useServerFn(adminHeartbeat);
+  useEffect(() => {
+    if (!isAdmin) return;
+    let cancelled = false;
+    const ping = () => { heartbeatFn().catch(() => {}); };
+    ping();
+    const id = window.setInterval(() => { if (!cancelled) ping(); }, 60_000);
+    return () => { cancelled = true; window.clearInterval(id); };
+  }, [isAdmin, heartbeatFn]);
+
   if (loading) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="size-6 animate-spin text-muted-foreground"/></div>;
   if (!isAdmin) return <Navigate to="/admin/login" />;
 
