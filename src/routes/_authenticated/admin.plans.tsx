@@ -12,7 +12,7 @@ import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/admin/plans")({ component: PlansPage });
 
-type Plan = { plan: "free" | "pro" | "max"; shorts_limit: number; longs_limit: number; ad_free: boolean; priority_queue: boolean; ai_model: string };
+type Plan = { plan: "free" | "pro" | "max"; shorts_limit: number; longs_limit: number; ad_free: boolean; priority_queue: boolean; ai_model: string; price_usd: number };
 
 function PlanCard({ plan: initial }: { plan: Plan }) {
   const upd = useServerFn(updatePlanLimit);
@@ -34,6 +34,7 @@ function PlanCard({ plan: initial }: { plan: Plan }) {
         <Button size="sm" onClick={save} className="btn-hero rounded-lg">Save</Button>
       </div>
       <div className="space-y-3">
+        <div><Label>Price (USD / month)</Label><Input type="number" step="0.01" value={p.price_usd} onChange={(e) => setP({ ...p, price_usd: +e.target.value })}/></div>
         <div><Label>Short generations / month</Label><Input type="number" value={p.shorts_limit} onChange={(e) => setP({ ...p, shorts_limit: +e.target.value })}/></div>
         <div><Label>Long generations / month</Label><Input type="number" value={p.longs_limit} onChange={(e) => setP({ ...p, longs_limit: +e.target.value })}/></div>
         <div><Label>AI Model</Label><Input value={p.ai_model} onChange={(e) => setP({ ...p, ai_model: e.target.value })}/></div>

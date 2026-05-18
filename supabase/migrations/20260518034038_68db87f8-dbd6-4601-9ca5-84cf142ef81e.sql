@@ -1,0 +1,2 @@
+ALTER TABLE public.plan_limits ADD COLUMN IF NOT EXISTS price_usd numeric(10,2) NOT NULL DEFAULT 0;
+UPDATE public.plan_limits SET price_usd = CASE plan::text WHEN 'free' THEN 0 WHEN 'pro' THEN 19 WHEN 'max' THEN 49 ELSE price_usd END;

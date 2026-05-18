@@ -1,5 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { motion } from "framer-motion";
+import { useEffect, useState } from "react";
 import {
   Sparkles, Zap, Wand2, Film, Languages, Hash, Image as ImageIcon,
   Video, Brain, Rocket, Check, ChevronRight, Flame, Clapperboard, Eye,
@@ -8,6 +9,7 @@ import { Nav } from "@/components/site/Nav";
 import { Particles } from "@/components/site/Particles";
 import { useAuth } from "@/hooks/use-auth";
 import { useRegionPrice, formatPrice } from "@/hooks/use-region-price";
+import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/")({
   component: Landing,
@@ -31,6 +33,15 @@ function Landing() {
   const { profile } = useAuth();
   const currentPlan = profile?.plan ?? null;
   const region = useRegionPrice();
+  const [prices, setPrices] = useState<Record<string, number>>({ free: 0, pro: 19, max: 49 });
+  useEffect(() => {
+    supabase.from("plan_limits").select("plan,price_usd").then(({ data }) => {
+      if (!data) return;
+      const next: Record<string, number> = { free: 0, pro: 19, max: 49 };
+      data.forEach((r: any) => { next[r.plan] = Number(r.price_usd) || 0; });
+      setPrices(next);
+    });
+  }, []);
   return (
     <div className="relative min-h-screen overflow-hidden">
       <Nav />
@@ -184,9 +195,9 @@ function Landing() {
 
           <div className="grid md:grid-cols-3 gap-5">
             {[
-              { key: "free", name: "Free", priceUsd: 0, tag: "Try the engine", features: ["2 short scripts", "1 long-form script", "Per-line scene prompts", "Full SEO pack", "Ads enabled"], cta: "Start free", highlight: false },
-              { key: "pro", name: "Pro", priceUsd: 19, tag: "Creators", features: ["10 short scripts", "6 long-form scripts", "Faster generation", "Better AI quality", "Ad-free", "Save history"], cta: "Go Pro", highlight: true },
-              { key: "max", name: "Max", priceUsd: 49, tag: "Faceless studios", features: ["20 short scripts", "10 long-form scripts", "Premium AI model", "Strongest hooks", "Highest virality tuning", "Priority queue"], cta: "Go Max", highlight: false },
+              { key: "free", name: "Free", priceUsd: prices.free, tag: "Try the engine", features: ["2 short scripts", "1 long-form script", "Per-line scene prompts", "Full SEO pack", "Ads enabled"], cta: "Start free", highlight: false },
+              { key: "pro", name: "Pro", priceUsd: prices.pro, tag: "Creators", features: ["10 short scripts", "6 long-form scripts", "Faster generation", "Better AI quality", "Ad-free", "Save history"], cta: "Go Pro", highlight: true },
+              { key: "max", name: "Max", priceUsd: prices.max, tag: "Faceless studios", features: ["20 short scripts", "10 long-form scripts", "Premium AI model", "Strongest hooks", "Highest virality tuning", "Priority queue"], cta: "Go Max", highlight: false },
             ].map((p) => {
               const isCurrent = currentPlan === p.key;
               // Freeze rules:
