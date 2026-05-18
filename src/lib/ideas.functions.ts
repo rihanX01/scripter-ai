@@ -99,6 +99,11 @@ export const getViralIdeas = createServerFn({ method: "POST" })
 
     const { supabase } = context;
 
+    // 0. Get plan caps (per-request) before consuming.
+    const { data: usageInfo } = await supabase.rpc("get_my_usage");
+    const perReqCap = Math.max(1, Number((usageInfo as any)?.ideas_per_request_limit ?? 3));
+    const effectiveCount = Math.min(data.count, perReqCap);
+
     // 1. Atomically check + consume the user's idea-generation quota
     const { data: usage, error: quotaErr } = await supabase.rpc("consume_quota", { _format: "ideas" });
     if (quotaErr) throw new Error(parseQuotaError(quotaErr.message));
@@ -108,9 +113,9 @@ export const getViralIdeas = createServerFn({ method: "POST" })
     const userPrompt = `CATEGORY: ${data.category}${data.category === "auto" ? " (pick the hottest sub-niches across all categories)" : ""}
 LANGUAGE: ${data.language}
 FORMAT TARGET: ${data.format === "short" ? "YouTube Shorts / Reels / TikTok (under 60s)" : "Long-form YouTube (8–15 min)"}
-${data.audience ? `AUDIENCE: ${data.audience}\n` : ""}${data.vibe ? `VIBE: ${data.vibe}\n` : ""}HOW MANY: ${data.count} ideas
+${data.audience ? `AUDIENCE: ${data.audience}\n` : ""}${data.vibe ? `VIBE: ${data.vibe}\n` : ""}HOW MANY: ${effectiveCount} ideas
 
-Generate ${data.count} world-class viral ideas now. Be ruthless about originality — no generic "Top 10 facts" filler. Each idea must have a unique, scroll-stopping angle.`;
+Generate exactly ${effectiveCount} world-class viral ideas now. Be ruthless about originality — no generic "Top 10 facts" filler. Each idea must have a unique, scroll-stopping angle. Each idea must include 8 to 12 lowercase hashtags with no spaces.`;
 
     const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
