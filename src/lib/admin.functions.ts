@@ -70,6 +70,7 @@ export const getAdminOverview = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     await assertAdmin(context.userId);
+    await ensurePlanLimitRows();
     const [users, gens, recentGens, planBreakdown, last7] = await Promise.all([
       supabaseAdmin.from("profiles").select("*", { count: "exact", head: true }),
       supabaseAdmin.from("generations").select("*", { count: "exact", head: true }),
