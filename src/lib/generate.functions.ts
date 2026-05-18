@@ -371,9 +371,18 @@ RULES:
     const user = `TOPIC: ${data.topic}
 OUTPUT LANGUAGE (for script + summary): ${data.language}
 FORMAT: ${data.format ?? "unspecified"}
-SOURCES REQUIREMENT: provide AT LEAST ${sourceFloor * 2} distinct, credible, verifiable source links${isLong ? " (long-form scripts need deep sourcing — aim for 20–30 sources spanning primary research, news, official orgs, and books)" : ""}. Each URL MUST be a real, currently-live page you are highly confident exists (dead links will be silently dropped, so over-cite from stable canonical sources). Never invent URLs or guess slugs.
-${data.script ? `\nBASE SCRIPT (research MUST be grounded in and expand on this script — extract claims, verify them, find sources that support/contextualize each beat, and rewrite the final "script" field as a research-backed version of this):\n"""\n${data.script}\n"""\n` : ""}
-Do deep research and emit the structured payload now.`;
+
+${data.script ? `BASE SCRIPT (THIS IS THE GROUND TRUTH — every source you cite MUST directly back up a specific claim, fact, statistic, name, date, place, or event mentioned in THIS script):\n"""\n${data.script}\n"""\n` : "(no base script supplied — research the topic directly)"}
+
+SOURCING REQUIREMENT (CRITICAL):
+- Provide AT LEAST ${sourceFloor * 2} distinct, credible, verifiable source links${isLong ? " (long-form scripts need deep sourcing — aim for 20–30 sources)" : ""}.
+- Each source MUST map to a specific claim/line in the base script above. Walk through the script beat by beat and find a credible source for each factual claim (numbers, names, dates, places, events, quotes, scientific facts).
+- In each source's "snippet" field, quote or paraphrase the exact line from the script it supports (e.g. "Supports script claim: '...'"). This proves the source actually backs the script's content — do not cite tangential or generic sources.
+- key_findings and stats must also be extracted from / verifiable against the script's claims.
+- Each URL MUST be a real, currently-live page you are highly confident exists (dead links will be silently dropped). Prefer Wikipedia article pages, official org homepages (nasa.gov, who.int), DOI, arXiv, PubMed, Britannica. Never invent URLs or guess slugs.
+- The rewritten "script" field should be a research-backed version of the base script — same beats, sharper facts.
+
+Do deep research now and emit the structured payload.`;
 
     const model = plan === "max" ? "google/gemini-2.5-pro" : "google/gemini-2.5-flash";
 
